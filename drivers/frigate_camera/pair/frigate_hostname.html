@@ -1,0 +1,40 @@
+
+<script type="application/javascript">
+  function connect(event) {
+    event.preventDefault()
+
+    const submitButton = document.getElementById('submit')
+    submitButton.classList.add('is-loading')
+    submitButton.classList.add('disabled')
+
+    const frigateURLInputElement = document.getElementById('frigateURL')
+    Homey.emit('connect', frigateURLInputElement.value)
+    return false
+  }
+  Homey.on('error', (message) => {
+    const submitButton = document.getElementById('submit')
+    submitButton.classList.remove('is-loading')
+    submitButton.classList.remove('disabled')
+
+    const errorContainer = document.getElementById('message')
+    errorContainer.textContent = message
+  })
+  Homey.on('status', (status) => {
+    const errorContainer = document.getElementById('message')
+    errorContainer.textContent = status
+  })
+</script>
+<header class="homey-title">Enter your frigate's URL</header>
+<form class="homey-form" onsubmit="return connect(event)">
+  <fieldset class="homey-form-fieldset">
+    <label class="homey-form-label" for="frigateURL">Frigate URL</label>
+    <input
+      class="homey-form-input"
+      id="frigateURL"
+      type="url"
+      value="http://10.10.0.2:5000"
+      placeholder="http://<frigate url>:5000" />
+  </fieldset>
+  <button class="homey-button-primary" id="submit">Connect</button>
+  <p id="message"></p>
+</form>

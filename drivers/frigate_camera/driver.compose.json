@@ -1,0 +1,99 @@
+{
+  "name": {
+    "en": "Camera"
+  },
+  "class": "camera",
+  "capabilities": [],
+  "platforms": [
+    "local"
+  ],
+  "connectivity": [
+    "lan"
+  ],
+  "pair": [
+    {
+      "id": "frigate_hostname"
+    },
+    {
+      "id": "list_devices",
+      "template": "list_devices",
+      "navigation": { "next": "add_devices"}
+    },
+    {
+      "id": "add_devices",
+      "template": "add_devices"
+    }
+  ],
+  "settings": [
+    {
+      "id": "frigateUrl",
+      "type": "text",
+      "label": { "en": "FrigateNVR's URL" },
+      "value": "http://frigate:5000",
+      "hint": { "en": "The URL to the Frigate NVR URL, including the protocol (http/https) and port" }
+    },
+    {
+      "id": "mqttUsername",
+      "type": "text",
+      "label": { "en": "MQTT host name" },
+      "value": "",
+      "hint": { "en": "The hostname of the MQTT server" }
+    },
+    {
+      "id": "mqttPassword",
+      "type": "password",
+      "label": { "en": "MQTT host name" },
+      "value": "",
+      "hint": { "en": "The hostname of the MQTT server" }
+    }
+  ],
+  "store": [
+    {
+      "id": "cameraName",
+      "type": "text",
+      "label": { "en": "Camera name" },
+      "value": "CameraName",
+      "hint": { "en": "The name of the camera as it appears in Frigate NVR's configuration" }
+    },
+    {
+      "id": "mqttEnabled",
+      "type": "boolean",
+      "label": { "en": "MQTT enaled" },
+      "value": "",
+      "hint": { "en": "Whether FrigateNVR publishes events to MQTT" }
+    },
+    {
+      "id": "mqttHost",
+      "type": "text",
+      "label": { "en": "MQTT host name" },
+      "value": "frigate",
+      "hint": { "en": "The hostname of the MQTT server" }
+    },
+    {
+      "id": "mqttPort",
+      "type": "number",
+      "label": { "en": "MQTT port" },
+      "value": 1883,
+      "hint": { "en": "The hostname of the MQTT server" }
+    },
+    {
+      "id": "mqttTopicPrefix",
+      "type": "number",
+      "label": { "en": "MQTT topic prefix" },
+      "value": "frigate",
+      "hint": { "en": "The MQTT topic prefix used by FrigateNVR" }
+    },
+    {
+      "id": "trackedObjects",
+      "type": "string",
+      "label": { "en": "Types of objects tracked" },
+      "value": "person",
+      "hint": { "en": "The types of objects tracked by this camera" }
+    }
+  ],
+  "images": {
+    "small": "{{driverAssetsPath}}/images/small.png",
+    "large": "{{driverAssetsPath}}/images/large.png",
+    "xlarge": "{{driverAssetsPath}}/images/xlarge.png"
+  }
+}

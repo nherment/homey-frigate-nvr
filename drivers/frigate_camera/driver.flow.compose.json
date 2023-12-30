@@ -1,0 +1,72 @@
+{
+  "triggers": [
+    {
+      "id": "object-detected",
+      "title": {
+        "en": "Object detected"
+      },
+      "tokens": [
+        {
+          "type": "string",
+          "name": "object",
+          "title": {
+            "en": "Object type"
+          },
+          "example": {
+            "en": "The type of object detected"
+          }
+        },
+        {
+          "type": "string",
+          "name": "cameraName",
+          "title": {
+            "en": "Camera name"
+          },
+          "example": {
+            "en": "The name of the camera in which the object is detected"
+          }
+        },
+        {
+          "type": "image",
+          "name": "snapshot",
+          "title": {
+            "en": "Snapshot"
+          },
+          "example": {
+            "en": "A snapshot of the image"
+          }
+        },
+        {
+          "type": "image",
+          "name": "thumbnail",
+          "title": {
+            "en": "Thumbnail"
+          },
+          "example": {
+            "en": "A thumbnail of the image"
+          }
+        },
+        {
+          "type": "string",
+          "name": "clipURL",
+          "title": {
+            "en": "Clip URL"
+          },
+          "example": {
+            "en": "The frigate URL for the video clip"
+          }
+        },
+        {
+          "type": "string",
+          "name": "eventId",
+          "title": {
+            "en": "Event id"
+          },
+          "example": {
+            "en": "The id of the related frigate event"
+          }
+        }
+      ]
+    }
+  ]
+}
