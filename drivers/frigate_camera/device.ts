@@ -9,6 +9,22 @@ interface Occupancy {
   [key:string]: number
 }
 
+interface DeviceSettings {
+  frigateURL: string
+  detectionThrottle: number
+  mqttUsername: string
+  mqttPassword: string
+}
+
+interface DeviceStore {
+  cameraName: string
+  trackedObjects: string
+  mqttHost
+  mqttPort
+  mqttTopicPrefix
+  mqttEnabled
+}
+
 function shouldTriggerObjectDetection(event:MQTTFrigateEvent):boolean {
   return !event.after.false_positive &&
     event.after.has_snapshot &&
@@ -22,7 +38,8 @@ class MyDevice extends Homey.Device {
   cameraName:string|null = null
   trackedObjects:string[] = []
   occupancy:Occupancy = {}
-  triggerThrottling = false
+  detectionThrottleInMilliseconds = 60000
+  lastTrigger:number = 0
 
   /**
    * onInit is called when the device is initialized.
@@ -30,6 +47,7 @@ class MyDevice extends Homey.Device {
   async onInit() {
 
     this.frigateURL = this.getSetting('frigateURL')
+    this.detectionThrottleInMilliseconds = this.getSetting('detectionThrottle') * 1000
     this.cameraName = this.getStoreValue('cameraName')
     this.trackedObjects = this.getStoreValue('trackedObjects').split(',')
 
@@ -40,9 +58,17 @@ class MyDevice extends Homey.Device {
     if(!this.cameraName) {
       throw new Error('Could not initialize device because the cameraName stored data is empty')
     }
-
+    console.log(this.frigateURL, this.cameraName, this.trackedObjects)
     const image = await getLatestImage(this.homey, this.frigateURL, this.cameraName)
     this.setCameraImage(this.cameraName + '-latest', this.cameraName, image)
+
+    this.homey.flow.createToken(`${this.cameraName} latest`, {
+      type: "image",
+      title: `${this.cameraName} - latest`,
+      value: image
+    }).catch(err => {
+      this.log(err)
+    })
 
     if(this.getStoreValue('mqttEnabled')) {
       const mqttConfig:IClientOptions = {}
@@ -73,14 +99,19 @@ class MyDevice extends Homey.Device {
     this.log(`Camera ${this.cameraName} has been initialized`);
   }
 
+  _throttle() {
+    return Date.now() <= (this.lastTrigger + this.detectionThrottleInMilliseconds)
+  }
+
+  _recordTriggerForThrottling() {
+    this.lastTrigger = Date.now()
+  }
+
   async _mqttHandleEvent(event:MQTTFrigateEvent) {
 
     const eventId = event.after.id
-    if(shouldTriggerObjectDetection(event) && !this.triggerThrottling) {
-      this.triggerThrottling = true
-      setTimeout(() => {
-        this.triggerThrottling = false
-      }, 60000)
+    if(shouldTriggerObjectDetection(event) && !this._throttle()) {
+      this._recordTriggerForThrottling()
 
       this.log(`Object detected ${this.cameraName}/${event.after.label}. EventId=${eventId}`)
 
@@ -88,10 +119,19 @@ class MyDevice extends Homey.Device {
         getSnapshotImage({homey: this.homey, frigateURL: this.frigateURL!, eventId}),
         getThumbnailImage({homey: this.homey, frigateURL: this.frigateURL!, eventId})
       ])
-      let clipURL:string = `${this.frigateURL}/api/events/${eventId}/clip.mp4`
 
-      const objDetectedTrigger = this.homey.flow.getDeviceTriggerCard('object-detected')
-      objDetectedTrigger.trigger(this, {
+      let clipURL:string = `${this.frigateURL}/api/events/${eventId}/clip.mp4`
+      this.homey.flow.getDeviceTriggerCard('object-detected').trigger(this, {
+        'object': event.after.label,
+        'cameraName': event.after.camera,
+        'snapshot': snapshot,
+        'thumbnail': thumbnail,
+        'clipURL': clipURL,
+        'eventId': event.after.id
+      })
+
+
+      this.homey.flow.getTriggerCard('object-detected').trigger({
         'object': event.after.label,
         'cameraName': event.after.camera,
         'snapshot': snapshot,
@@ -124,6 +164,7 @@ class MyDevice extends Homey.Device {
     newSettings: { [key: string]: boolean | string | number | undefined | null };
     changedKeys: string[];
   }): Promise<string | void> {
+    if(newSettings[])
     // TODO: update stored data if frigateURL has changed.
     // TODO: reconnect to MQTT if username/pwd have changed
     this.log("MyDevice settings where changed");

@@ -10,16 +10,16 @@
     "en": "Frigate NVR"
   },
   "description": {
-    "en": "Frigate NVR integration for Homey (unofficial)"
+    "en": "Monitor your security cameras with locally processed AI"
   },
   "category": [
     "security"
   ],
   "permissions": [],
   "images": {
-    "small": "/assets/images/small.png",
-    "large": "/assets/images/large.png",
-    "xlarge": "/assets/images/xlarge.png"
+    "small": "/assets/images/frigate_logo_small.png",
+    "large": "/assets/images/frigate_logo_large.png",
+    "xlarge": "/assets/images/frigate_logo_xlarge.png"
   },
   "author": {
     "name": "Nicolas Herment",

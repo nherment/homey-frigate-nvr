@@ -26,7 +26,7 @@
   ],
   "settings": [
     {
-      "id": "frigateUrl",
+      "id": "frigateURL",
       "type": "text",
       "label": { "en": "FrigateNVR's URL" },
       "value": "http://frigate:5000",
@@ -45,6 +45,13 @@
       "label": { "en": "MQTT host name" },
       "value": "",
       "hint": { "en": "The hostname of the MQTT server" }
+    },
+    {
+      "id": "detectionThrottle",
+      "type": "number",
+      "label": { "en": "Throttle delay in seconds" },
+      "value": 60,
+      "hint": { "en": "Defines the maximum frequency at which this camera can trigger events. In seconds." }
     }
   ],
   "store": [
@@ -92,8 +99,8 @@
     }
   ],
   "images": {
-    "small": "{{driverAssetsPath}}/images/small.png",
-    "large": "{{driverAssetsPath}}/images/large.png",
-    "xlarge": "{{driverAssetsPath}}/images/xlarge.png"
+    "small": "{{driverAssetsPath}}/images/camera_small.png",
+    "large": "{{driverAssetsPath}}/images/camera_large.png",
+    "xlarge": "{{driverAssetsPath}}/images/camera_xlarge.png"
   }
 }

@@ -18,36 +18,88 @@
   ],
   "permissions": [],
   "images": {
-    "small": "/assets/images/small.png",
-    "large": "/assets/images/large.png",
-    "xlarge": "/assets/images/xlarge.png"
+    "small": "/assets/images/frigate_logo_small.png",
+    "large": "/assets/images/frigate_logo_large.png",
+    "xlarge": "/assets/images/frigate_logo_xlarge.png"
   },
   "author": {
     "name": "Nicolas Herment",
     "email": "nherment@arkhaios.net"
   },
   "flow": {
-    "actions": [
+    "triggers": [
       {
         "title": {
-          "en": "Share video"
+          "en": "FrigateNVR object detected"
         },
-        "droptoken": [
-          "string"
-        ],
-        "args": [
+        "hint": {
+          "en": "Triggers whenever any of the FrigateNVR cameras detects an object"
+        },
+        "args": [],
+        "tokens": [
           {
-            "type": "text",
-            "name": "localURL",
-            "placeholder": {
-              "en": "http://frigate:5000/video.mp4"
+            "type": "string",
+            "name": "object",
+            "title": {
+              "en": "Object type"
+            },
+            "example": {
+              "en": "The type of object detected"
+            }
+          },
+          {
+            "type": "string",
+            "name": "cameraName",
+            "title": {
+              "en": "Camera name"
+            },
+            "example": {
+              "en": "The name of the camera in which the object is detected"
+            }
+          },
+          {
+            "type": "image",
+            "name": "snapshot",
+            "title": {
+              "en": "Snapshot"
+            },
+            "example": {
+              "en": "A snapshot of the image"
+            }
+          },
+          {
+            "type": "image",
+            "name": "thumbnail",
+            "title": {
+              "en": "Thumbnail"
+            },
+            "example": {
+              "en": "A thumbnail of the image"
+            }
+          },
+          {
+            "type": "string",
+            "name": "clipURL",
+            "title": {
+              "en": "Clip URL"
+            },
+            "example": {
+              "en": "The frigate URL for the video clip"
+            }
+          },
+          {
+            "type": "string",
+            "name": "eventId",
+            "title": {
+              "en": "Event id"
+            },
+            "example": {
+              "en": "The id of the related frigate event"
             }
           }
         ],
-        "id": "share-video"
-      }
-    ],
-    "triggers": [
+        "id": "frigatenvr-object-detected"
+      },
       {
         "id": "object-detected",
         "title": {
@@ -123,6 +175,26 @@
           }
         ]
       }
+    ],
+    "actions": [
+      {
+        "title": {
+          "en": "Share video"
+        },
+        "droptoken": [
+          "string"
+        ],
+        "args": [
+          {
+            "type": "text",
+            "name": "localURL",
+            "placeholder": {
+              "en": "http://frigate:5000/video.mp4"
+            }
+          }
+        ],
+        "id": "share-video"
+      }
     ]
   },
   "drivers": [
@@ -156,7 +228,7 @@
       ],
       "settings": [
         {
-          "id": "frigateUrl",
+          "id": "frigateURL",
           "type": "text",
           "label": {
             "en": "FrigateNVR's URL"
@@ -186,6 +258,17 @@
           "value": "",
           "hint": {
             "en": "The hostname of the MQTT server"
+          }
+        },
+        {
+          "id": "detectionThrottle",
+          "type": "number",
+          "label": {
+            "en": "Throttle delay in seconds"
+          },
+          "value": 60,
+          "hint": {
+            "en": "Defines the maximum frequency at which this camera can trigger events. In seconds."
           }
         }
       ],
@@ -258,9 +341,9 @@
         }
       ],
       "images": {
-        "small": "/drivers/frigate_camera/assets/images/small.png",
-        "large": "/drivers/frigate_camera/assets/images/large.png",
-        "xlarge": "/drivers/frigate_camera/assets/images/xlarge.png"
+        "small": "/drivers/frigate_camera/assets/images/camera_small.png",
+        "large": "/drivers/frigate_camera/assets/images/camera_large.png",
+        "xlarge": "/drivers/frigate_camera/assets/images/camera_xlarge.png"
       },
       "id": "frigate_camera"
     }
