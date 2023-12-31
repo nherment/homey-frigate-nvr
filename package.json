@@ -17,7 +17,6 @@
   },
   "dependencies": {
     "axios": "^1.6.3",
-    "cloudinary": "^1.41.1",
     "mqtt": "^5.3.4",
     "node-fetch": "^3.3.2"
   }
