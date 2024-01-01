@@ -13,5 +13,8 @@
   },
   "1.0.4": {
     "en": "Improve throttling, prevent unique event double fire and improve stale event handling"
+  },
+  "1.0.5": {
+    "en": "Fix settings labelling issues"
   }
 }
