@@ -1,5 +1,8 @@
 {
   "1.0.0": {
     "en": "Add your Frigate NVR cameras to Homey"
+  },
+  "1.0.1": {
+    "en": "Improved image management and added capabilities"
   }
 }
