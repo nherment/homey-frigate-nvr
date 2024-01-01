@@ -35,23 +35,25 @@
     {
       "id": "mqttUsername",
       "type": "text",
-      "label": { "en": "MQTT host name" },
+      "label": { "en": "MQTT username" },
       "value": "",
-      "hint": { "en": "The hostname of the MQTT server" }
+      "hint": { "en": "The username for connecting to the MQTT server" }
     },
     {
       "id": "mqttPassword",
       "type": "password",
-      "label": { "en": "MQTT host name" },
+      "label": { "en": "MQTT password" },
       "value": "",
-      "hint": { "en": "The hostname of the MQTT server" }
+      "hint": { "en": "The hostname for connecting to the MQTT server" }
     },
     {
       "id": "detectionThrottle",
       "type": "number",
       "label": { "en": "Throttle delay in seconds" },
       "value": 60,
-      "hint": { "en": "Defines the maximum frequency at which this camera can trigger events. In seconds." }
+      "minimum": 0,
+      "maximum": 3600,
+      "hint": { "en": "Defines the maximum frequency at which this camera can trigger events. In seconds. Set to 0 to disable throttling." }
     }
   ],
   "store": [
@@ -65,7 +67,7 @@
     {
       "id": "mqttEnabled",
       "type": "boolean",
-      "label": { "en": "MQTT enaled" },
+      "label": { "en": "MQTT enabled" },
       "value": "",
       "hint": { "en": "Whether FrigateNVR publishes events to MQTT" }
     },
@@ -81,7 +83,7 @@
       "type": "number",
       "label": { "en": "MQTT port" },
       "value": 1883,
-      "hint": { "en": "The hostname of the MQTT server" }
+      "hint": { "en": "The port of the MQTT server" }
     },
     {
       "id": "mqttTopicPrefix",
