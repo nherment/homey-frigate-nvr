@@ -10,5 +10,8 @@
   },
   "1.0.3": {
     "en": "Add error reporting to Sentry"
+  },
+  "1.0.4": {
+    "en": "Improve throttling, prevent unique event double fire and improve stale event handling"
   }
 }
