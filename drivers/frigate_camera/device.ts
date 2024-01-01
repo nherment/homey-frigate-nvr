@@ -25,7 +25,8 @@ function shouldTriggerObjectDetection(event:MQTTFrigateEvent):boolean {
   return !event.after.false_positive &&
     event.after.has_snapshot &&
     event.after.has_clip &&
-    (event.type === 'new' || event.type === 'update')
+    (event.type === 'new' || event.type === 'update') &&
+    (!!event.before.label || !!event.after.label)
 }
 
 function capitalize(str:string) {
@@ -126,7 +127,10 @@ class Camera extends Homey.Device {
 
   }
 
-  _throttle() {
+  _shouldThrottle():boolean {
+    if(this.detectionThrottleInMilliseconds <= 0) {
+      return false
+    }
     return Date.now() <= (this.lastTrigger + this.detectionThrottleInMilliseconds)
   }
 
@@ -139,7 +143,10 @@ class Camera extends Homey.Device {
       this.activeEvents.set(trackedObject, new Set<string>())
     }
     const events = this.activeEvents.get(trackedObject)
-    events?.add(eventId)
+    if(!events?.has(eventId)) {
+      events?.add(eventId)
+      this._continuousCheckIfEventStillOngoing(trackedObject, eventId)
+    }
     if(trackedObject === 'person') {
       await this.setCapabilityValue('person_detected', true)
     }
@@ -169,65 +176,70 @@ class Camera extends Homey.Device {
     await this.setCapabilityValue('person_detected', false)
   }
 
+  async _continuousCheckIfEventStillOngoing(trackedObject:string, eventId:string) {
+    setTimeout(async () => {
+      if(this._isEventActive(trackedObject, eventId)) {
+        const ongoing = await frigateAPI.isEventOngoing({frigateURL:this.frigateURL!, eventId})
+        if(ongoing) {
+          await this._continuousCheckIfEventStillOngoing(trackedObject, eventId)
+        } else {
+          await this._setEventEnded(trackedObject, eventId)
+        }
+      }
+    }, 10000)
+  }
 
   async _mqttHandleEvent(event:MQTTFrigateEvent) {
 
     const eventId = event.after.id
     const trackedObject = event.after.label || event.before.label
-    if(trackedObject && !event.after.false_positive) {
-      await this._setEventActive(trackedObject, eventId)
-      this.homey.setTimeout(() => {
-        // Always mark events as inactive after a timeout period
-        // in case we missed the MQTT end message for that event
-        // TODO: check-in with frigate if the event has ended
-        this._setEventEnded(trackedObject, eventId)
-      }, 300000)
+
+    if(!trackedObject) {
+      return
     }
 
-    if(shouldTriggerObjectDetection(event) && !this._throttle()) {
-      this._recordTriggerForThrottling()
+    if(shouldTriggerObjectDetection(event) && !this._isEventActive(trackedObject, eventId)) {
+      await this._setEventActive(trackedObject, eventId)
 
-      if(!trackedObject) {
-        return
+      if(!this._shouldThrottle()) {
+        this._recordTriggerForThrottling()
+
+        // this.log(`Object detected ${this.frigateCameraName}/${trackedObject}. EventId=${eventId}`)
+
+        const snapshot = await this.homey.images.createImage()
+        const thumbnail = await this.homey.images.createImage()
+
+        await Promise.all([
+          frigateAPI.getEventSnapshotImage({image: snapshot, frigateURL: this.frigateURL!, eventId}),
+          frigateAPI.getEventThumbnailImage({image: thumbnail, frigateURL: this.frigateURL!, eventId})
+        ])
+
+        let clipURL:string = `${this.frigateURL}/api/events/${eventId}/clip.mp4`
+
+        this.homey.flow.getDeviceTriggerCard('object-detected').trigger(this, {
+          'object': trackedObject,
+          'cameraName': event.after.camera,
+          'snapshot': snapshot,
+          'thumbnail': thumbnail,
+          'clipURL': clipURL,
+          'eventId': event.after.id
+        })
+
+        this.homey.flow.getTriggerCard('all-cameras-object-detected').trigger({
+          'object': trackedObject,
+          'cameraName': event.after.camera,
+          'snapshot': snapshot,
+          'thumbnail': thumbnail,
+          'clipURL': clipURL,
+          'eventId': event.after.id
+        })
       }
-
-      this.log(`Object detected ${this.frigateCameraName}/${trackedObject}. EventId=${eventId}`)
-
-      const snapshot = await this.homey.images.createImage()
-
-      const thumbnail = await this.homey.images.createImage()
-
-      await Promise.all([
-        frigateAPI.getEventSnapshotImage({image: snapshot, frigateURL: this.frigateURL!, eventId}),
-        frigateAPI.getEventThumbnailImage({image: thumbnail, frigateURL: this.frigateURL!, eventId})
-      ])
-
-      let clipURL:string = `${this.frigateURL}/api/events/${eventId}/clip.mp4`
-
-      this.homey.flow.getDeviceTriggerCard('object-detected').trigger(this, {
-        'object': trackedObject,
-        'cameraName': event.after.camera,
-        'snapshot': snapshot,
-        'thumbnail': thumbnail,
-        'clipURL': clipURL,
-        'eventId': event.after.id
-      })
-
-      this.homey.flow.getTriggerCard('all-cameras-object-detected').trigger({
-        'object': trackedObject,
-        'cameraName': event.after.camera,
-        'snapshot': snapshot,
-        'thumbnail': thumbnail,
-        'clipURL': clipURL,
-        'eventId': event.after.id
-      })
     } else if(trackedObject && (event.type === 'end' || event.after.false_positive)) {
       await this._setEventEnded(trackedObject, eventId)
     }
   }
 
   async _mqttHandleOccupancyChange(occupancy: MQTTOccupancy) {
-    // this.log(`Occupancy ${this.cameraName}/${occupancy.trackedObject}=${occupancy.count}`)
     if(occupancy.trackedObject === 'person') {
       this.setCapabilityValue('occupancy', occupancy.count)
     }

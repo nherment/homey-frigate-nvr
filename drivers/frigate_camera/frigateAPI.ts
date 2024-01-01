@@ -1,5 +1,4 @@
 import { Image } from "homey";
-import Homey from "homey/lib/Homey";
 import axios from "axios";
 import { FrigateNVRConfig, FrigateNVREventHandler, FrigateNVROccupancyHandler, MQTTFrigateEvent, MQTTOccupancy } from "./types";
 import mqtt, { IClientOptions, MqttClient } from 'mqtt';
@@ -19,45 +18,48 @@ export const fetchFrigateConfig = async(frigateURL:string) => {
 
 
 export const getCameraLatestImage = async(args: {image:Image, frigateURL:string, cameraName:string}) => {
-
+  const url = `${args.frigateURL}/api/${args.cameraName}/latest.jpg`
   args.image.setStream(async (stream:Writable) => {
     const res = await axios({
       method: 'get',
-      url: `${args.frigateURL}/api/${args.cameraName}/latest.jpg`,
+      url: url,
       responseType: 'stream'
     })
     if(res.status !== 200) {
-      throw new Error('Invalid response')
+      const err = new Error(`Failed to fetch image ${url}. httpStatusCode=${res.status}. ${res.statusText}`)
+      console.log(err)
     }
     pipeline(res.data, stream)
   })
 }
 
 export const getCameraObjectSnapshotImage = async(args: {image:Image, frigateURL:string, cameraName:string, object:string}) => {
-
+  const url = `${args.frigateURL}/api/${args.cameraName}/${args.object}/snapshot.jpg`
   args.image.setStream(async (stream:Writable) => {
     const res = await axios({
       method: 'get',
-      url: `${args.frigateURL}/api/${args.cameraName}/${args.object}/snapshot.jpg`,
+      url: url,
       responseType: 'stream'
     })
     if(res.status !== 200) {
-      throw new Error('Invalid response')
+      const err = new Error(`Failed to fetch image ${url}. httpStatusCode=${res.status}. ${res.statusText}`)
+      console.log(err)
     }
     pipeline(res.data, stream)
   })
 }
 
 export const getCameraObjectThumbnailImage = async(args: {image:Image, frigateURL:string, cameraName:string, object:string}) => {
-
+  const url = `${args.frigateURL}/api/${args.cameraName}/${args.object}/thumbnail.jpg`
   args.image.setStream(async (stream:Writable) => {
     const res = await axios({
       method: 'get',
-      url: `${args.frigateURL}/api/${args.cameraName}/${args.object}/thumbnail.jpg`,
+      url: url,
       responseType: 'stream'
     })
     if(res.status !== 200) {
-      throw new Error('Invalid response')
+      const err = new Error(`Failed to fetch image ${url}. httpStatusCode=${res.status}. ${res.statusText}`)
+      console.log(err)
     }
     pipeline(res.data, stream)
   })
@@ -83,7 +85,7 @@ export const getEventImage = async(args:{image:Image, frigateURL:string, eventId
       const err = new Error(`Failed to fetch image ${url}. httpStatusCode=${res.status}. ${res.statusText}`)
       console.error(err)
     } else {
-      res.data.pipe(stream)
+      pipeline(res.data, stream)
     }
   })
 }
@@ -277,5 +279,21 @@ export const stopListeningToEvents = async (cameraName:string) => {
       connection.client.end()
       connections.splice(i, 1)
     }
+  }
+}
+
+export const isEventOngoing = async(args: {frigateURL:string, eventId:string}):Promise<boolean> => {
+  const url = `${args.frigateURL}/api/events/${args.eventId}`
+  const res = await axios({
+    method: 'get',
+    url: url,
+    responseType: 'json'
+  })
+  if(res.status !== 200) {
+    const err = new Error(`Failed to fetch image ${url}. httpStatusCode=${res.status}. ${res.statusText}`)
+    console.log(err)
+    return false
+  } else {
+    return !res.data.end_time
   }
 }
