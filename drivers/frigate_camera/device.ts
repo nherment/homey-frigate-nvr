@@ -1,9 +1,9 @@
-import Homey, { Image } from 'homey';
+import Homey from 'homey';
 
-import mqtt, { IClientOptions } from 'mqtt';
+import { IClientOptions } from 'mqtt';
 
 import { MQTTFrigateEvent, MQTTOccupancy } from './types';
-import { getLatestImage, getSnapshotImage, getThumbnailImage, listenToEvents, stopListeningToEvents } from './frigateAPI';
+import { fetchFrigateConfig, getEventSnapshotImage, getEventThumbnailImage, listenToEvents, stopListeningToEvents, getCameraLatestImage, getCameraObjectSnapshotImage, getCameraObjectThumbnailImage } from './frigateAPI';
 
 interface Occupancy {
   [key:string]: number
@@ -19,10 +19,10 @@ interface DeviceSettings {
 interface DeviceStore {
   cameraName: string
   trackedObjects: string
-  mqttHost
-  mqttPort
-  mqttTopicPrefix
-  mqttEnabled
+  mqttHost: string
+  mqttPort: number
+  mqttTopicPrefix: string
+  mqttEnabled: boolean
 }
 
 function shouldTriggerObjectDetection(event:MQTTFrigateEvent):boolean {
@@ -35,7 +35,7 @@ function shouldTriggerObjectDetection(event:MQTTFrigateEvent):boolean {
 class MyDevice extends Homey.Device {
 
   frigateURL:string|null = null
-  cameraName:string|null = null
+  frigateCameraName:string|null = null
   trackedObjects:string[] = []
   occupancy:Occupancy = {}
   detectionThrottleInMilliseconds = 60000
@@ -45,58 +45,84 @@ class MyDevice extends Homey.Device {
    * onInit is called when the device is initialized.
    */
   async onInit() {
+    const settings = this.getSettings() as DeviceSettings
+    const store = this.getStore() as DeviceStore
+    this.frigateURL = settings.frigateURL
+    this.detectionThrottleInMilliseconds = settings.detectionThrottle * 1000
+    this.frigateCameraName = store.cameraName
+    this.trackedObjects = store.trackedObjects.split(',')
 
-    this.frigateURL = this.getSetting('frigateURL')
-    this.detectionThrottleInMilliseconds = this.getSetting('detectionThrottle') * 1000
-    this.cameraName = this.getStoreValue('cameraName')
-    this.trackedObjects = this.getStoreValue('trackedObjects').split(',')
+    await this.unsetWarning()
 
+    await Promise.all([
+      this._setupImages(),
+      this._connectToMQTT()
+    ])
+
+    this.log(`Camera ${this.frigateCameraName} has been initialized`);
+  }
+
+  async _setupImages() {
 
     if(!this.frigateURL) {
-      throw new Error('Could not initialize device because the frigateURL setting is empty')
+      return this.setWarning('Could not initialize device because the frigateURL setting is empty')
     }
-    if(!this.cameraName) {
-      throw new Error('Could not initialize device because the cameraName stored data is empty')
+    if(!this.frigateCameraName) {
+      return this.setWarning('Could not initialize device because the cameraName stored data is empty')
     }
-    console.log(this.frigateURL, this.cameraName, this.trackedObjects)
-    const image = await getLatestImage(this.homey, this.frigateURL, this.cameraName)
-    this.setCameraImage(this.cameraName + '-latest', this.cameraName, image)
 
-    this.homey.flow.createToken(`${this.cameraName} latest`, {
+    const latestImage = await getCameraLatestImage({
+      homey: this.homey,
+      frigateURL: this.frigateURL,
+      cameraName: this.frigateCameraName
+    })
+
+    this.setCameraImage(`${this.frigateCameraName} - latest`, this.frigateCameraName, latestImage)
+
+    this.homey.flow.createToken(`${this.frigateCameraName} latest`, {
       type: "image",
-      title: `${this.cameraName} - latest`,
-      value: image
+      title: `${this.getName()} - latest`,
+      value: latestImage
     }).catch(err => {
       this.log(err)
     })
 
-    if(this.getStoreValue('mqttEnabled')) {
-      const mqttConfig:IClientOptions = {}
-      if(this.getStoreValue('mqttHost')) {
-        mqttConfig.host = this.getStoreValue('mqttHost')
-      }
-      if(this.getStoreValue('mqttPort')) {
-        mqttConfig.port = this.getStoreValue('mqttPort')
-      }
-      if(this.getSetting('mqttUsername')) {
-        mqttConfig.username = this.getSetting('mqttUsername')
-      }
-      if(this.getSetting('mqttPassword')) {
-        mqttConfig.password = this.getSetting('mqttPassword')
-      }
-      const mqttTopicPrefix = this.getStoreValue('mqttTopicPrefix')
+    if(this.frigateCameraName !== 'birdseye') {
 
-      listenToEvents({
-        mqttConfig,
-        cameraName: this.cameraName,
-        trackedObjects: this.trackedObjects,
-        mqttTopicPrefix,
-        eventHandler: this._mqttHandleEvent.bind(this),
-        occupancyHandler: this._mqttHandleOccupancyChange.bind(this)
-      })
+      for(let trackedObject of this.trackedObjects) {
+        const [snapshot, thumbnail] = await Promise.all([
+          getCameraObjectSnapshotImage({
+            homey: this.homey,
+            frigateURL: this.frigateURL,
+            cameraName: this.frigateCameraName,
+            object: trackedObject
+          }),
+          getCameraObjectThumbnailImage({
+            homey: this.homey,
+            frigateURL: this.frigateURL,
+            cameraName: this.frigateCameraName,
+            object: trackedObject
+          })
+        ])
+
+        this.homey.flow.createToken(`${this.frigateCameraName} ${trackedObject} - snapshot`, {
+          type: "image",
+          title: `${this.getName()} - ${trackedObject} - snapshot`,
+          value: snapshot
+        }).catch(err => {
+          this.log(err)
+        })
+
+        this.homey.flow.createToken(`${this.frigateCameraName} ${trackedObject} - thumbnail`, {
+          type: "image",
+          title: `${this.getName()} - ${trackedObject} - thumbnail`,
+          value: thumbnail
+        }).catch(err => {
+          this.log(err)
+        })
+      }
     }
 
-    this.log(`Camera ${this.cameraName} has been initialized`);
   }
 
   _throttle() {
@@ -113,11 +139,11 @@ class MyDevice extends Homey.Device {
     if(shouldTriggerObjectDetection(event) && !this._throttle()) {
       this._recordTriggerForThrottling()
 
-      this.log(`Object detected ${this.cameraName}/${event.after.label}. EventId=${eventId}`)
+      this.log(`Object detected ${this.frigateCameraName}/${event.after.label}. EventId=${eventId}`)
 
       const [snapshot, thumbnail] = await Promise.all([
-        getSnapshotImage({homey: this.homey, frigateURL: this.frigateURL!, eventId}),
-        getThumbnailImage({homey: this.homey, frigateURL: this.frigateURL!, eventId})
+        getEventSnapshotImage({homey: this.homey, frigateURL: this.frigateURL!, eventId}),
+        getEventThumbnailImage({homey: this.homey, frigateURL: this.frigateURL!, eventId})
       ])
 
       let clipURL:string = `${this.frigateURL}/api/events/${eventId}/clip.mp4`
@@ -131,7 +157,7 @@ class MyDevice extends Homey.Device {
       })
 
 
-      this.homey.flow.getTriggerCard('object-detected').trigger({
+      this.homey.flow.getTriggerCard('all-cameras-object-detected').trigger({
         'object': event.after.label,
         'cameraName': event.after.camera,
         'snapshot': snapshot,
@@ -160,21 +186,88 @@ class MyDevice extends Homey.Device {
     newSettings,
     changedKeys,
   }: {
-    oldSettings: { [key: string]: boolean | string | number | undefined | null };
-    newSettings: { [key: string]: boolean | string | number | undefined | null };
+    oldSettings: unknown;
+    newSettings: unknown;
     changedKeys: string[];
   }): Promise<string | void> {
-    if(newSettings[])
-    // TODO: update stored data if frigateURL has changed.
-    // TODO: reconnect to MQTT if username/pwd have changed
+    const newS = newSettings as DeviceSettings
+    if(changedKeys.includes('frigateURL')) {
+      this._syncFrigateData(newS)
+    } else if (changedKeys.includes('mqttUsername') || changedKeys.includes('mqttPassword')) {
+      await this._disconnectFromMQTT()
+      await this._connectToMQTT()
+    }
     this.log("MyDevice settings where changed");
+  }
+
+  async _syncFrigateData(settings:DeviceSettings) {
+    const frigateConfig = await fetchFrigateConfig(settings.frigateURL)
+    const newCameraConfig = frigateConfig.cameras[this.frigateCameraName!]
+    if(!newCameraConfig) {
+      this.setUnavailable(`Could not find camera ${this.frigateCameraName} in Frigate instance ${settings.frigateURL}. Either remove the camera and install a new one or provide a corrected frigate URL in this device's settings`)
+    } else {
+      const trackedObjects = frigateConfig.objects?.track || ['person']
+      this.setStoreValue('trackedObjects', trackedObjects.join(','))
+
+      if(frigateConfig.mqtt) {
+        this.setStoreValue('mqttEnabled', frigateConfig.mqtt.enabled)
+        this.setStoreValue('mqttHost', frigateConfig.mqtt.host)
+        this.setStoreValue('mqttPort', frigateConfig.mqtt.port)
+        this.setStoreValue('mqttTopicPrefix', frigateConfig.mqtt.topic_prefix)
+        await this._disconnectFromMQTT()
+        await this._connectToMQTT()
+      }
+    }
+  }
+
+  async _connectToMQTT() {
+
+    if(this.frigateCameraName === 'birdseye') {
+      return
+    }
+    const settings = this.getSettings() as DeviceSettings
+    const store = this.getStore() as DeviceStore
+    if(store.mqttEnabled) {
+      const mqttConfig:IClientOptions = {}
+      if(store.mqttHost) {
+        mqttConfig.host = store.mqttHost
+      }
+      if(store.mqttPort) {
+        mqttConfig.port = store.mqttPort
+      }
+      if(settings.mqttUsername) {
+        mqttConfig.username = settings.mqttUsername
+      }
+      if(settings.mqttPassword) {
+        mqttConfig.password = settings.mqttPassword
+      }
+
+      try {
+        await listenToEvents({
+          mqttConfig,
+          cameraName: this.frigateCameraName!,
+          trackedObjects: this.trackedObjects,
+          mqttTopicPrefix: store.mqttTopicPrefix,
+          eventHandler: this._mqttHandleEvent.bind(this),
+          occupancyHandler: this._mqttHandleOccupancyChange.bind(this)
+        })
+        await this.unsetWarning()
+      } catch(err:any) {
+        this.log(err)
+        this.setWarning(`Failed to connect to MQTT server. ${err.message}`)
+      }
+    }
+  }
+
+  async _disconnectFromMQTT() {
+    await stopListeningToEvents(this.frigateCameraName!)
   }
 
   /**
    * onDeleted is called when the user deleted the device.
    */
   async onDeleted() {
-    await stopListeningToEvents(this.cameraName!)
+    await this._disconnectFromMQTT()
   }
 
 }

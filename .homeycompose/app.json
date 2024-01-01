@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "compatibility": ">=5.0.0",
   "sdk": 3,
+  "brandColor": "#3b82f6",
   "platforms": [
     "local"
   ],
@@ -17,10 +18,16 @@
   ],
   "permissions": [],
   "images": {
-    "small": "/assets/images/frigate_logo_small.png",
-    "large": "/assets/images/frigate_logo_large.png",
-    "xlarge": "/assets/images/frigate_logo_xlarge.png"
+    "small": "/assets/images/camera_1_small.png",
+    "large": "/assets/images/camera_1_large.png",
+    "xlarge": "/assets/images/camera_1_xlarge.png"
   },
+  "bugs": {
+    "url": "https://github.com/nherment/homey-frigate-nvr/issues"
+  },
+  "source": "https://github.com/nherment/homey-frigate-nvr",
+  "homepage": "https://github.com/nherment/homey-frigate-nvr",
+  "support": "mailto:homey-frigate@arkhaios.net",
   "author": {
     "name": "Nicolas Herment",
     "email": "nherment@arkhaios.net"

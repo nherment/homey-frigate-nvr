@@ -1,18 +1,30 @@
 import { Image } from "homey";
 import Homey from "homey/lib/Homey";
 import axios from "axios";
-import { FrigateNVREventHandler, FrigateNVROccupancyHandler, MQTTFrigateEvent, MQTTOccupancy } from "./types";
+import { FrigateNVRConfig, FrigateNVREventHandler, FrigateNVROccupancyHandler, MQTTFrigateEvent, MQTTOccupancy } from "./types";
 import mqtt, { IClientOptions, MqttClient } from 'mqtt';
 import { pipeline } from 'node:stream/promises'
 import { Writable } from "node:stream";
 
-export const getLatestImage = async(homey:Homey, frigateURL:string, cameraName:string):Promise<Image> => {
+export const fetchFrigateConfig = async(frigateURL:string) => {
+  const response = await axios.get<FrigateNVRConfig>(`${frigateURL}/api/config`, {
+    timeout: 10000
+  })
+  if(!response || response.status !== 200) {
+    throw new Error(`Failed to reach FrigateNVR at <url>. Received error ${response.status} - ${response.statusText}`)
+  } else {
+    return response.data
+  }
+}
 
-  const image = await homey.images.createImage()
+
+export const getCameraLatestImage = async(args: {homey:Homey, frigateURL:string, cameraName:string}):Promise<Image> => {
+
+  const image = await args.homey.images.createImage()
   image.setStream(async (stream:Writable) => {
     const res = await axios({
       method: 'get',
-      url: `${frigateURL}/api/${cameraName}/latest.jpg`,
+      url: `${args.frigateURL}/api/${args.cameraName}/latest.jpg`,
       responseType: 'stream'
     })
     if(res.status !== 200) {
@@ -23,11 +35,45 @@ export const getLatestImage = async(homey:Homey, frigateURL:string, cameraName:s
   return image
 }
 
-export const getSnapshotImage = (args:{homey:Homey, frigateURL:string, eventId:string}):Promise<Image> => {
+export const getCameraObjectSnapshotImage = async(args: {homey:Homey, frigateURL:string, cameraName:string, object:string}):Promise<Image> => {
+
+  const image = await args.homey.images.createImage()
+  image.setStream(async (stream:Writable) => {
+    const res = await axios({
+      method: 'get',
+      url: `${args.frigateURL}/api/${args.cameraName}/${args.object}/snapshot.jpg`,
+      responseType: 'stream'
+    })
+    if(res.status !== 200) {
+      throw new Error('Invalid response')
+    }
+    return res.data.pipe(stream)
+  })
+  return image
+}
+
+export const getCameraObjectThumbnailImage = async(args: {homey:Homey, frigateURL:string, cameraName:string, object:string}):Promise<Image> => {
+
+  const image = await args.homey.images.createImage()
+  image.setStream(async (stream:Writable) => {
+    const res = await axios({
+      method: 'get',
+      url: `${args.frigateURL}/api/${args.cameraName}/${args.object}/thumbnail.jpg`,
+      responseType: 'stream'
+    })
+    if(res.status !== 200) {
+      throw new Error('Invalid response')
+    }
+    return res.data.pipe(stream)
+  })
+  return image
+}
+
+export const getEventSnapshotImage = (args:{homey:Homey, frigateURL:string, eventId:string}):Promise<Image> => {
   return getEventImage({...args, type: 'snapshot'})
 }
 
-export const getThumbnailImage = (args:{homey:Homey, frigateURL:string, eventId:string}):Promise<Image> => {
+export const getEventThumbnailImage = (args:{homey:Homey, frigateURL:string, eventId:string}):Promise<Image> => {
   return getEventImage({...args, type: 'thumbnail'})
 }
 
@@ -134,7 +180,7 @@ const connectToMQTTServer = async (mqttConfig:IClientOptions, mqttTopicPrefix:st
     console.log(`Creating new connection to MQTT server ${mqttConfig.username}@${mqttConfig.host}:${mqttConfig.port}`)
 
     const client = mqtt.connect(`mqtt://${mqttConfig.host}:${mqttConfig.port}`, mqttConfig)
-
+    client.setMaxListeners(100) // avoid warnings when many cameras initialised and listen to the connect event
     currentConnection = {
       client: client,
       config: mqttConfig,

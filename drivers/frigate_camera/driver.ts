@@ -2,7 +2,7 @@ import Homey from 'homey';
 import { PairSession } from 'homey/lib/Driver';
 import axios from 'axios';
 import { FrigateNVRConfig } from './types';
-import mqtt from 'mqtt';
+import { fetchFrigateConfig } from './frigateAPI';
 
 class MyDriver extends Homey.Driver {
 
@@ -22,27 +22,24 @@ class MyDriver extends Homey.Driver {
 
     const connect = async(address:string) => {
       try {
-        const response = await axios.get<FrigateNVRConfig>(`${address}/api/config`, {
-          timeout: 30000
-        })
-        if(!response || response.status !== 200) {
-          const errorMessage = `Failed to reach FrigateNVR at <url>. Received error ${response.status} - ${response.statusText}`
-          this.log('Emitting error ' + errorMessage)
-          await session.emit('error', errorMessage)
-        } else {
-          frigateConfig = response.data
-
-          await session.showView('list_devices')
-        }
+        frigateConfig = await fetchFrigateConfig(address)
+        await session.showView('list_devices')
       } catch(err:any) {
         await session.emit('error', err.message)
       }
-
     }
+
+    session.setHandler('getDefaultFrigateURL', async () => {
+      const defaultFrigateURL = this.homey.settings.get('defaultFrigateURL')
+      this.log('Sharing defaultFrigateURL=' + defaultFrigateURL)
+      await session.emit('defaultFrigateURL', defaultFrigateURL)
+    })
 
     session.setHandler('connect', async (address) => {
       this.log('Received connect event '+ address)
       frigateAddress = address
+      // Store the Frigate URL to save the user from entering it again
+      this.homey.settings.set('defaultFrigateURL', frigateAddress)
       await connect(address)
     })
 
@@ -106,7 +103,6 @@ class MyDriver extends Homey.Driver {
           return 0
         }
       })
-      console.log(JSON.stringify(devices))
       return devices
     })
   }

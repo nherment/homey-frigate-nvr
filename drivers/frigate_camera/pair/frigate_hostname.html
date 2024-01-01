@@ -8,7 +8,9 @@
     submitButton.classList.add('disabled')
 
     const frigateURLInputElement = document.getElementById('frigateURL')
-    Homey.emit('connect', frigateURLInputElement.value)
+    if(frigateURLInputElement.value) {
+      Homey.emit('connect', frigateURLInputElement.value)
+    }
     return false
   }
   Homey.on('error', (message) => {
@@ -32,9 +34,21 @@
       class="homey-form-input"
       id="frigateURL"
       type="url"
-      value="http://10.10.0.2:5000"
       placeholder="http://<frigate url>:5000" />
   </fieldset>
   <button class="homey-button-primary" id="submit">Connect</button>
   <p id="message"></p>
 </form>
+
+<script type="application/javascript">
+
+  // Fetch the stored Frigate URL to save the user from entering it again
+  const frigateURLInputElement = document.getElementById('frigateURL')
+  Homey.emit('getDefaultFrigateURL', true)
+  Homey.on('defaultFrigateURL', defaultFrigateURL => {
+    if(defaultFrigateURL) {
+      frigateURLInputElement.value = defaultFrigateURL
+    }
+  })
+
+</script>
