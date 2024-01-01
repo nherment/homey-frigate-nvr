@@ -249,7 +249,7 @@
           "id": "mqttUsername",
           "type": "text",
           "label": {
-            "en": "MQTT user name"
+            "en": "MQTT host name"
           },
           "value": "",
           "hint": {
@@ -260,7 +260,7 @@
           "id": "mqttPassword",
           "type": "password",
           "label": {
-            "en": "MQTT password"
+            "en": "MQTT host name"
           },
           "value": "",
           "hint": {
