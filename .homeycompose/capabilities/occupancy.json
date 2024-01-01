@@ -1,0 +1,11 @@
+{
+  "type": "number",
+  "title": { "en": "Occupancy" },
+  "uiComponent": "sensor",
+  "getable": true,
+  "setable": false,
+  "unit": {
+    "en": "Persons"
+  },
+  "icon": "/assets/capabilities/group.svg"
+}

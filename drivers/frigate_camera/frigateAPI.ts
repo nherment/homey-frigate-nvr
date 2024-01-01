@@ -18,10 +18,9 @@ export const fetchFrigateConfig = async(frigateURL:string) => {
 }
 
 
-export const getCameraLatestImage = async(args: {homey:Homey, frigateURL:string, cameraName:string}):Promise<Image> => {
+export const getCameraLatestImage = async(args: {image:Image, frigateURL:string, cameraName:string}) => {
 
-  const image = await args.homey.images.createImage()
-  image.setStream(async (stream:Writable) => {
+  args.image.setStream(async (stream:Writable) => {
     const res = await axios({
       method: 'get',
       url: `${args.frigateURL}/api/${args.cameraName}/latest.jpg`,
@@ -30,15 +29,13 @@ export const getCameraLatestImage = async(args: {homey:Homey, frigateURL:string,
     if(res.status !== 200) {
       throw new Error('Invalid response')
     }
-    return res.data.pipe(stream)
+    pipeline(res.data, stream)
   })
-  return image
 }
 
-export const getCameraObjectSnapshotImage = async(args: {homey:Homey, frigateURL:string, cameraName:string, object:string}):Promise<Image> => {
+export const getCameraObjectSnapshotImage = async(args: {image:Image, frigateURL:string, cameraName:string, object:string}) => {
 
-  const image = await args.homey.images.createImage()
-  image.setStream(async (stream:Writable) => {
+  args.image.setStream(async (stream:Writable) => {
     const res = await axios({
       method: 'get',
       url: `${args.frigateURL}/api/${args.cameraName}/${args.object}/snapshot.jpg`,
@@ -47,15 +44,13 @@ export const getCameraObjectSnapshotImage = async(args: {homey:Homey, frigateURL
     if(res.status !== 200) {
       throw new Error('Invalid response')
     }
-    return res.data.pipe(stream)
+    pipeline(res.data, stream)
   })
-  return image
 }
 
-export const getCameraObjectThumbnailImage = async(args: {homey:Homey, frigateURL:string, cameraName:string, object:string}):Promise<Image> => {
+export const getCameraObjectThumbnailImage = async(args: {image:Image, frigateURL:string, cameraName:string, object:string}) => {
 
-  const image = await args.homey.images.createImage()
-  image.setStream(async (stream:Writable) => {
+  args.image.setStream(async (stream:Writable) => {
     const res = await axios({
       method: 'get',
       url: `${args.frigateURL}/api/${args.cameraName}/${args.object}/thumbnail.jpg`,
@@ -64,23 +59,21 @@ export const getCameraObjectThumbnailImage = async(args: {homey:Homey, frigateUR
     if(res.status !== 200) {
       throw new Error('Invalid response')
     }
-    return res.data.pipe(stream)
+    pipeline(res.data, stream)
   })
-  return image
 }
 
-export const getEventSnapshotImage = (args:{homey:Homey, frigateURL:string, eventId:string}):Promise<Image> => {
+export const getEventSnapshotImage = (args:{image:Image, frigateURL:string, eventId:string}) => {
   return getEventImage({...args, type: 'snapshot'})
 }
 
-export const getEventThumbnailImage = (args:{homey:Homey, frigateURL:string, eventId:string}):Promise<Image> => {
+export const getEventThumbnailImage = (args:{image:Image, frigateURL:string, eventId:string}) => {
   return getEventImage({...args, type: 'thumbnail'})
 }
 
-export const getEventImage = async(args:{homey:Homey, frigateURL:string, eventId:string, type:'thumbnail'|'snapshot'}):Promise<Image> => {
+export const getEventImage = async(args:{image:Image, frigateURL:string, eventId:string, type:'thumbnail'|'snapshot'}) => {
   const url = `${args.frigateURL}/api/events/${args.eventId}/${args.type}.jpg`
-  const image = await args.homey.images.createImage()
-  image.setStream(async (stream:Writable) => {
+  args.image.setStream(async (stream:Writable) => {
     const res = await axios({
       method: 'get',
       url: url,
@@ -93,7 +86,6 @@ export const getEventImage = async(args:{homey:Homey, frigateURL:string, eventId
       res.data.pipe(stream)
     }
   })
-  return image
 }
 
 interface OccupancyTopic {

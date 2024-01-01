@@ -17,6 +17,10 @@
     "security"
   ],
   "permissions": [],
+  "capabilities": [
+    "occupancy",
+    "person_detected"
+  ],
   "images": {
     "small": "/assets/images/camera_1_small.png",
     "large": "/assets/images/camera_1_large.png",

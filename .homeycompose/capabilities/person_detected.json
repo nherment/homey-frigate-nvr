@@ -1,0 +1,9 @@
+{
+  "type": "boolean",
+  "title": { "en": "Person detected" },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "uiQuickAction": false,
+  "icon": "/assets/capabilities/bell.svg"
+}

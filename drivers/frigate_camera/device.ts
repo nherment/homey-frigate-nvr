@@ -1,13 +1,9 @@
-import Homey from 'homey';
+import Homey, { FlowToken, Image } from 'homey';
 
 import { IClientOptions } from 'mqtt';
 
 import { MQTTFrigateEvent, MQTTOccupancy } from './types';
-import { fetchFrigateConfig, getEventSnapshotImage, getEventThumbnailImage, listenToEvents, stopListeningToEvents, getCameraLatestImage, getCameraObjectSnapshotImage, getCameraObjectThumbnailImage } from './frigateAPI';
-
-interface Occupancy {
-  [key:string]: number
-}
+import * as frigateAPI from './frigateAPI';
 
 interface DeviceSettings {
   frigateURL: string
@@ -32,14 +28,19 @@ function shouldTriggerObjectDetection(event:MQTTFrigateEvent):boolean {
     (event.type === 'new' || event.type === 'update')
 }
 
-class MyDevice extends Homey.Device {
+function capitalize(str:string) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+class Camera extends Homey.Device {
 
   frigateURL:string|null = null
   frigateCameraName:string|null = null
   trackedObjects:string[] = []
-  occupancy:Occupancy = {}
   detectionThrottleInMilliseconds = 60000
   lastTrigger:number = 0
+  latestImage:Image|null = null
+  activeEvents:Map<string, Set<string>> = new Map<string, Set<string>>()
 
   /**
    * onInit is called when the device is initialized.
@@ -51,8 +52,10 @@ class MyDevice extends Homey.Device {
     this.detectionThrottleInMilliseconds = settings.detectionThrottle * 1000
     this.frigateCameraName = store.cameraName
     this.trackedObjects = store.trackedObjects.split(',')
-
-    await this.unsetWarning()
+    await this._setupCapabilities()
+    await Promise.all([
+      this.unsetWarning()
+    ])
 
     await Promise.all([
       this._setupImages(),
@@ -60,6 +63,27 @@ class MyDevice extends Homey.Device {
     ])
 
     this.log(`Camera ${this.frigateCameraName} has been initialized`);
+  }
+
+  async _setupCapabilities() {
+    if(this.frigateCameraName === 'birdseye') {
+      return
+    }
+    const capabilities = this.getCapabilities()
+    if(!capabilities.includes('occupancy')) {
+      await this.addCapability('occupancy')
+      await this.setCapabilityValue('occupancy', 0)
+    }
+    if(!capabilities.includes('person_detected')) {
+      await this.addCapability('person_detected')
+      await this.setCapabilityValue('person_detected', false)
+    }
+    let capabilitiesToRemove = capabilities.filter(c => !['person_detected', 'occupancy'].includes(c));
+    console.log( 'capabilitiesToRemove', capabilitiesToRemove)
+    for(const cap of capabilitiesToRemove) {
+      this.log(`Removing capability ${cap}}`)
+      await this.removeCapability(cap)
+    }
   }
 
   async _setupImages() {
@@ -71,55 +95,32 @@ class MyDevice extends Homey.Device {
       return this.setWarning('Could not initialize device because the cameraName stored data is empty')
     }
 
-    const latestImage = await getCameraLatestImage({
-      homey: this.homey,
+    if(!this.latestImage) {
+      this.latestImage = await this.homey.images.createImage()
+    }
+    await frigateAPI.getCameraLatestImage({
+      image: this.latestImage,
       frigateURL: this.frigateURL,
       cameraName: this.frigateCameraName
     })
 
-    this.setCameraImage(`${this.frigateCameraName} - latest`, this.frigateCameraName, latestImage)
-
-    this.homey.flow.createToken(`${this.frigateCameraName} latest`, {
-      type: "image",
-      title: `${this.getName()} - latest`,
-      value: latestImage
-    }).catch(err => {
-      this.log(err)
-    })
+    this.setCameraImage('latest', 'Live', this.latestImage)
 
     if(this.frigateCameraName !== 'birdseye') {
 
       for(let trackedObject of this.trackedObjects) {
-        const [snapshot, thumbnail] = await Promise.all([
-          getCameraObjectSnapshotImage({
-            homey: this.homey,
-            frigateURL: this.frigateURL,
-            cameraName: this.frigateCameraName,
-            object: trackedObject
-          }),
-          getCameraObjectThumbnailImage({
-            homey: this.homey,
-            frigateURL: this.frigateURL,
-            cameraName: this.frigateCameraName,
-            object: trackedObject
-          })
-        ])
 
-        this.homey.flow.createToken(`${this.frigateCameraName} ${trackedObject} - snapshot`, {
-          type: "image",
-          title: `${this.getName()} - ${trackedObject} - snapshot`,
-          value: snapshot
-        }).catch(err => {
-          this.log(err)
+        const snapshotImage = await this.homey.images.createImage()
+
+        frigateAPI.getCameraObjectSnapshotImage({
+          image: snapshotImage,
+          frigateURL: this.frigateURL,
+          cameraName: this.frigateCameraName,
+          object: trackedObject
         })
 
-        this.homey.flow.createToken(`${this.frigateCameraName} ${trackedObject} - thumbnail`, {
-          type: "image",
-          title: `${this.getName()} - ${trackedObject} - thumbnail`,
-          value: thumbnail
-        }).catch(err => {
-          this.log(err)
-        })
+        this.setCameraImage(trackedObject, capitalize(trackedObject), snapshotImage)
+
       }
     }
 
@@ -133,44 +134,103 @@ class MyDevice extends Homey.Device {
     this.lastTrigger = Date.now()
   }
 
+  async _setEventActive(trackedObject:string, eventId:string) {
+    if(!this.activeEvents.has(trackedObject)) {
+      this.activeEvents.set(trackedObject, new Set<string>())
+    }
+    const events = this.activeEvents.get(trackedObject)
+    events?.add(eventId)
+    if(trackedObject === 'person') {
+      await this.setCapabilityValue('person_detected', true)
+    }
+  }
+
+  async _setEventEnded(trackedObject:string, eventId:string) {
+    if(!this.activeEvents.has(trackedObject)) {
+      return
+    }
+    const events = this.activeEvents.get(trackedObject)
+    events?.delete(eventId)
+    if(events?.size === 0) {
+      this.activeEvents.delete(trackedObject)
+      if(trackedObject === 'person') {
+        await this.setCapabilityValue('person_detected', false)
+      }
+
+    }
+  }
+
+  _isEventActive(trackedObject:string, eventId:string) {
+    return this.activeEvents.get(trackedObject)?.has(eventId)
+  }
+
+  async _clearAllActiveEvents() {
+    this.activeEvents.clear()
+    await this.setCapabilityValue('person_detected', false)
+  }
+
+
   async _mqttHandleEvent(event:MQTTFrigateEvent) {
 
     const eventId = event.after.id
+    const trackedObject = event.after.label || event.before.label
+    if(trackedObject && !event.after.false_positive) {
+      await this._setEventActive(trackedObject, eventId)
+      this.homey.setTimeout(() => {
+        // Always mark events as inactive after a timeout period
+        // in case we missed the MQTT end message for that event
+        // TODO: check-in with frigate if the event has ended
+        this._setEventEnded(trackedObject, eventId)
+      }, 300000)
+    }
+
     if(shouldTriggerObjectDetection(event) && !this._throttle()) {
       this._recordTriggerForThrottling()
 
-      this.log(`Object detected ${this.frigateCameraName}/${event.after.label}. EventId=${eventId}`)
+      if(!trackedObject) {
+        return
+      }
 
-      const [snapshot, thumbnail] = await Promise.all([
-        getEventSnapshotImage({homey: this.homey, frigateURL: this.frigateURL!, eventId}),
-        getEventThumbnailImage({homey: this.homey, frigateURL: this.frigateURL!, eventId})
+      this.log(`Object detected ${this.frigateCameraName}/${trackedObject}. EventId=${eventId}`)
+
+      const snapshot = await this.homey.images.createImage()
+
+      const thumbnail = await this.homey.images.createImage()
+
+      await Promise.all([
+        frigateAPI.getEventSnapshotImage({image: snapshot, frigateURL: this.frigateURL!, eventId}),
+        frigateAPI.getEventThumbnailImage({image: thumbnail, frigateURL: this.frigateURL!, eventId})
       ])
 
       let clipURL:string = `${this.frigateURL}/api/events/${eventId}/clip.mp4`
+
       this.homey.flow.getDeviceTriggerCard('object-detected').trigger(this, {
-        'object': event.after.label,
+        'object': trackedObject,
         'cameraName': event.after.camera,
         'snapshot': snapshot,
         'thumbnail': thumbnail,
         'clipURL': clipURL,
         'eventId': event.after.id
       })
-
 
       this.homey.flow.getTriggerCard('all-cameras-object-detected').trigger({
-        'object': event.after.label,
+        'object': trackedObject,
         'cameraName': event.after.camera,
         'snapshot': snapshot,
         'thumbnail': thumbnail,
         'clipURL': clipURL,
         'eventId': event.after.id
       })
+    } else if(trackedObject && (event.type === 'end' || event.after.false_positive)) {
+      await this._setEventEnded(trackedObject, eventId)
     }
   }
 
   async _mqttHandleOccupancyChange(occupancy: MQTTOccupancy) {
     // this.log(`Occupancy ${this.cameraName}/${occupancy.trackedObject}=${occupancy.count}`)
-    this.occupancy[occupancy.trackedObject] = occupancy.count
+    if(occupancy.trackedObject === 'person') {
+      this.setCapabilityValue('occupancy', occupancy.count)
+    }
   }
 
   /**
@@ -201,7 +261,7 @@ class MyDevice extends Homey.Device {
   }
 
   async _syncFrigateData(settings:DeviceSettings) {
-    const frigateConfig = await fetchFrigateConfig(settings.frigateURL)
+    const frigateConfig = await frigateAPI.fetchFrigateConfig(settings.frigateURL)
     const newCameraConfig = frigateConfig.cameras[this.frigateCameraName!]
     if(!newCameraConfig) {
       this.setUnavailable(`Could not find camera ${this.frigateCameraName} in Frigate instance ${settings.frigateURL}. Either remove the camera and install a new one or provide a corrected frigate URL in this device's settings`)
@@ -243,7 +303,7 @@ class MyDevice extends Homey.Device {
       }
 
       try {
-        await listenToEvents({
+        await frigateAPI.listenToEvents({
           mqttConfig,
           cameraName: this.frigateCameraName!,
           trackedObjects: this.trackedObjects,
@@ -260,7 +320,8 @@ class MyDevice extends Homey.Device {
   }
 
   async _disconnectFromMQTT() {
-    await stopListeningToEvents(this.frigateCameraName!)
+    await frigateAPI.stopListeningToEvents(this.frigateCameraName!)
+    await this._clearAllActiveEvents()
   }
 
   /**
@@ -272,4 +333,4 @@ class MyDevice extends Homey.Device {
 
 }
 
-module.exports = MyDevice;
+module.exports = Camera;
