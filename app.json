@@ -235,50 +235,77 @@
       ],
       "settings": [
         {
-          "id": "frigateURL",
-          "type": "text",
+          "type": "group",
           "label": {
-            "en": "FrigateNVR's URL"
+            "en": "Frigate"
           },
-          "value": "http://frigate:5000",
-          "hint": {
-            "en": "The URL to the Frigate NVR URL, including the protocol (http/https) and port"
-          }
+          "children": [
+            {
+              "id": "frigateURL",
+              "type": "text",
+              "label": {
+                "en": "FrigateNVR's URL"
+              },
+              "value": "http://frigate:5000",
+              "hint": {
+                "en": "The URL to the Frigate NVR URL, including the protocol (http/https) and port"
+              }
+            }
+          ]
         },
         {
-          "id": "mqttUsername",
-          "type": "text",
+          "type": "group",
           "label": {
-            "en": "MQTT username"
+            "en": "Flow triggers"
           },
-          "value": "",
-          "hint": {
-            "en": "The username for connecting to the MQTT server"
-          }
+          "children": [
+            {
+              "id": "detectionThrottle",
+              "type": "number",
+              "label": {
+                "en": "Throttle delay in seconds"
+              },
+              "value": 60,
+              "min": 0,
+              "max": 3600,
+              "units": {
+                "en": "seconds"
+              },
+              "hint": {
+                "en": "Defines the maximum frequency at which this camera can trigger events. Set to 0 to disable throttling."
+              }
+            }
+          ]
         },
         {
-          "id": "mqttPassword",
-          "type": "password",
+          "type": "group",
           "label": {
-            "en": "MQTT password"
+            "en": "MQTT"
           },
-          "value": "",
-          "hint": {
-            "en": "The hostname for connecting to the MQTT server"
-          }
-        },
-        {
-          "id": "detectionThrottle",
-          "type": "number",
-          "label": {
-            "en": "Throttle delay in seconds"
-          },
-          "value": 60,
-          "minimum": 0,
-          "maximum": 3600,
-          "hint": {
-            "en": "Defines the maximum frequency at which this camera can trigger events. In seconds. Set to 0 to disable throttling."
-          }
+          "children": [
+            {
+              "id": "mqttUsername",
+              "type": "text",
+              "label": {
+                "en": "Username"
+              },
+              "value": "",
+              "hint": {
+                "en": "The username for connecting to the MQTT server"
+              }
+            },
+            {
+              "id": "mqttPassword",
+              "type": "password",
+              "label": {
+                "en": "Password"
+              },
+              "value": "",
+              "hint": {
+                "en": "The hostname for connecting to the MQTT server"
+              }
+            }
+          ]
         }
       ],
       "store": [

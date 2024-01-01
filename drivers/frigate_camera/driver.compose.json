@@ -26,7 +26,7 @@
   ],
   "settings": [{
     "type": "group",
-    "label": { "en": "Login details" },
+    "label": { "en": "Frigate" },
     "children": [
       {
         "id": "frigateURL",
@@ -38,22 +38,8 @@
     ]
   }, {
     "type": "group",
-    "label": { "en": "MQTT" },
+    "label": { "en": "Flow triggers" },
     "children": [
-      {
-        "id": "mqttUsername",
-        "type": "text",
-        "label": { "en": "MQTT username" },
-        "value": "",
-        "hint": { "en": "The username for connecting to the MQTT server" }
-      },
-      {
-        "id": "mqttPassword",
-        "type": "password",
-        "label": { "en": "MQTT password" },
-        "value": "",
-        "hint": { "en": "The hostname for connecting to the MQTT server" }
-      },
       {
         "id": "detectionThrottle",
         "type": "number",
@@ -63,6 +49,25 @@
         "max": 3600,
         "units": { "en": "seconds" },
         "hint": { "en": "Defines the maximum frequency at which this camera can trigger events. Set to 0 to disable throttling." }
+      }
+    ]
+  }, {
+    "type": "group",
+    "label": { "en": "MQTT" },
+    "children": [
+      {
+        "id": "mqttUsername",
+        "type": "text",
+        "label": { "en": "Username" },
+        "value": "",
+        "hint": { "en": "The username for connecting to the MQTT server" }
+      },
+      {
+        "id": "mqttPassword",
+        "type": "password",
+        "label": { "en": "Password" },
+        "value": "",
+        "hint": { "en": "The hostname for connecting to the MQTT server" }
       }
     ]
   }],
