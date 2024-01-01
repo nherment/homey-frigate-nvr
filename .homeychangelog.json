@@ -4,5 +4,8 @@
   },
   "1.0.1": {
     "en": "Improved image management and added capabilities"
+  },
+  "1.0.2": {
+    "en": "Fix incorrect settings labels"
   }
 }
