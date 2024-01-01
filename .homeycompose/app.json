@@ -1,6 +1,6 @@
 {
   "id": "net.arkhaios.homey-frigate",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "compatibility": ">=5.0.0",
   "sdk": 3,
   "brandColor": "#3b82f6",
