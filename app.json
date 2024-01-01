@@ -249,22 +249,22 @@
           "id": "mqttUsername",
           "type": "text",
           "label": {
-            "en": "MQTT host name"
+            "en": "MQTT username"
           },
           "value": "",
           "hint": {
-            "en": "The hostname of the MQTT server"
+            "en": "The username for connecting to the MQTT server"
           }
         },
         {
           "id": "mqttPassword",
           "type": "password",
           "label": {
-            "en": "MQTT host name"
+            "en": "MQTT password"
           },
           "value": "",
           "hint": {
-            "en": "The hostname of the MQTT server"
+            "en": "The hostname for connecting to the MQTT server"
           }
         },
         {
@@ -274,8 +274,10 @@
             "en": "Throttle delay in seconds"
           },
           "value": 60,
+          "minimum": 0,
+          "maximum": 3600,
           "hint": {
-            "en": "Defines the maximum frequency at which this camera can trigger events. In seconds."
+            "en": "Defines the maximum frequency at which this camera can trigger events. In seconds. Set to 0 to disable throttling."
           }
         }
       ],
@@ -295,7 +297,7 @@
           "id": "mqttEnabled",
           "type": "boolean",
           "label": {
-            "en": "MQTT enaled"
+            "en": "MQTT enabled"
           },
           "value": "",
           "hint": {
@@ -321,7 +323,7 @@
           },
           "value": 1883,
           "hint": {
-            "en": "The hostname of the MQTT server"
+            "en": "The port of the MQTT server"
           }
         },
         {

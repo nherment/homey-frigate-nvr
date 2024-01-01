@@ -24,38 +24,48 @@
       "template": "add_devices"
     }
   ],
-  "settings": [
-    {
-      "id": "frigateURL",
-      "type": "text",
-      "label": { "en": "FrigateNVR's URL" },
-      "value": "http://frigate:5000",
-      "hint": { "en": "The URL to the Frigate NVR URL, including the protocol (http/https) and port" }
-    },
-    {
-      "id": "mqttUsername",
-      "type": "text",
-      "label": { "en": "MQTT username" },
-      "value": "",
-      "hint": { "en": "The username for connecting to the MQTT server" }
-    },
-    {
-      "id": "mqttPassword",
-      "type": "password",
-      "label": { "en": "MQTT password" },
-      "value": "",
-      "hint": { "en": "The hostname for connecting to the MQTT server" }
-    },
-    {
-      "id": "detectionThrottle",
-      "type": "number",
-      "label": { "en": "Throttle delay in seconds" },
-      "value": 60,
-      "minimum": 0,
-      "maximum": 3600,
-      "hint": { "en": "Defines the maximum frequency at which this camera can trigger events. In seconds. Set to 0 to disable throttling." }
-    }
-  ],
+  "settings": [{
+    "type": "group",
+    "label": { "en": "Login details" },
+    "children": [
+      {
+        "id": "frigateURL",
+        "type": "text",
+        "label": { "en": "FrigateNVR's URL" },
+        "value": "http://frigate:5000",
+        "hint": { "en": "The URL to the Frigate NVR URL, including the protocol (http/https) and port" }
+      }
+    ]
+  }, {
+    "type": "group",
+    "label": { "en": "MQTT" },
+    "children": [
+      {
+        "id": "mqttUsername",
+        "type": "text",
+        "label": { "en": "MQTT username" },
+        "value": "",
+        "hint": { "en": "The username for connecting to the MQTT server" }
+      },
+      {
+        "id": "mqttPassword",
+        "type": "password",
+        "label": { "en": "MQTT password" },
+        "value": "",
+        "hint": { "en": "The hostname for connecting to the MQTT server" }
+      },
+      {
+        "id": "detectionThrottle",
+        "type": "number",
+        "label": { "en": "Throttle delay in seconds" },
+        "value": 60,
+        "min": 0,
+        "max": 3600,
+        "units": { "en": "seconds" },
+        "hint": { "en": "Defines the maximum frequency at which this camera can trigger events. Set to 0 to disable throttling." }
+      }
+    ]
+  }],
   "store": [
     {
       "id": "cameraName",
