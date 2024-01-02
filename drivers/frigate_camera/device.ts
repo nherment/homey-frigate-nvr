@@ -53,39 +53,36 @@ class Camera extends Homey.Device {
     this.detectionThrottleInMilliseconds = settings.detectionThrottle * 1000
     this.frigateCameraName = store.cameraName
     this.trackedObjects = store.trackedObjects.split(',')
-    await this._setupCapabilities()
-    await Promise.all([
-      this.unsetWarning()
-    ])
 
-    await Promise.all([
-      this._setupImages(),
-      this._connectToMQTT()
-    ])
+    await this._setupImages()
+    await this._setupCapabilities()
+    await this.unsetWarning()
+    await this._connectToMQTT()
 
     this.log(`Camera ${this.frigateCameraName} has been initialized`);
   }
 
   async _setupCapabilities() {
     if(this.frigateCameraName === 'birdseye') {
-      return
-    }
-    const capabilities = this.getCapabilities()
-    if(!capabilities.includes('occupancy')) {
-      await this.addCapability('occupancy')
-      await this.setCapabilityValue('occupancy', 0)
-    }
-    if(!capabilities.includes('person_detected')) {
-      await this.addCapability('person_detected')
-      await this.setCapabilityValue('person_detected', false)
-    }
-    let capabilitiesToRemove = capabilities.filter(c => !['person_detected', 'occupancy'].includes(c));
-    console.log( 'capabilitiesToRemove', capabilitiesToRemove)
-    for(const cap of capabilitiesToRemove) {
-      this.log(`Removing capability ${cap}}`)
-      await this.removeCapability(cap)
+      const capabilities = this.getCapabilities()
+      if(capabilities.includes('occupancy')) {
+        await this.removeCapability('occupancy')
+      }
+      if(capabilities.includes('person_detected')) {
+        await this.removeCapability('person_detected')
+      }
     }
   }
+
+  // async logToTimeline() {
+  //   await this.homey.flow.({
+  //     uri: 'homey:manager:notifications',
+  //     id: 'create_notification',
+  //     args: {
+  //     text: 'some text ' + someVariable + ' some more text'
+  //     },
+  //   });
+  // }
 
   async _setupImages() {
 

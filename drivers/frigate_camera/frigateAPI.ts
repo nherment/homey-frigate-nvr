@@ -16,53 +16,40 @@ export const fetchFrigateConfig = async(frigateURL:string) => {
   }
 }
 
+export const axiosStream = (url:string):(stream:Writable)=>Promise<void> => {
+  return async (stream:Writable) => {
+    try {
+      const res = await axios({
+        method: 'get',
+        url: url,
+        responseType: 'stream'
+      })
+      if(res.status !== 200) {
+        const err = new Error(`Failed to fetch image ${url}. httpStatusCode=${res.status}. ${res.statusText}`)
+        console.error(err)
+      }
+      pipeline(res.data, stream).catch(err => {
+        console.error(`Failed to pipe image ${url}. Error: ${err.message}`)
+      })
+    } catch(err:any) {
+      console.error(`Failed to fetch ${url}. Error: ${err.message}`)
+    }
+  }
+}
 
 export const getCameraLatestImage = async(args: {image:Image, frigateURL:string, cameraName:string}) => {
   const url = `${args.frigateURL}/api/${args.cameraName}/latest.jpg`
-  args.image.setStream(async (stream:Writable) => {
-    const res = await axios({
-      method: 'get',
-      url: url,
-      responseType: 'stream'
-    })
-    if(res.status !== 200) {
-      const err = new Error(`Failed to fetch image ${url}. httpStatusCode=${res.status}. ${res.statusText}`)
-      console.log(err)
-    }
-    pipeline(res.data, stream)
-  })
+  args.image.setStream(axiosStream(url))
 }
 
 export const getCameraObjectSnapshotImage = async(args: {image:Image, frigateURL:string, cameraName:string, object:string}) => {
   const url = `${args.frigateURL}/api/${args.cameraName}/${args.object}/snapshot.jpg`
-  args.image.setStream(async (stream:Writable) => {
-    const res = await axios({
-      method: 'get',
-      url: url,
-      responseType: 'stream'
-    })
-    if(res.status !== 200) {
-      const err = new Error(`Failed to fetch image ${url}. httpStatusCode=${res.status}. ${res.statusText}`)
-      console.log(err)
-    }
-    pipeline(res.data, stream)
-  })
+  args.image.setStream(axiosStream(url))
 }
 
 export const getCameraObjectThumbnailImage = async(args: {image:Image, frigateURL:string, cameraName:string, object:string}) => {
   const url = `${args.frigateURL}/api/${args.cameraName}/${args.object}/thumbnail.jpg`
-  args.image.setStream(async (stream:Writable) => {
-    const res = await axios({
-      method: 'get',
-      url: url,
-      responseType: 'stream'
-    })
-    if(res.status !== 200) {
-      const err = new Error(`Failed to fetch image ${url}. httpStatusCode=${res.status}. ${res.statusText}`)
-      console.log(err)
-    }
-    pipeline(res.data, stream)
-  })
+  args.image.setStream(axiosStream(url))
 }
 
 export const getEventSnapshotImage = (args:{image:Image, frigateURL:string, eventId:string}) => {
@@ -75,19 +62,7 @@ export const getEventThumbnailImage = (args:{image:Image, frigateURL:string, eve
 
 export const getEventImage = async(args:{image:Image, frigateURL:string, eventId:string, type:'thumbnail'|'snapshot'}) => {
   const url = `${args.frigateURL}/api/events/${args.eventId}/${args.type}.jpg`
-  args.image.setStream(async (stream:Writable) => {
-    const res = await axios({
-      method: 'get',
-      url: url,
-      responseType: 'stream'
-    })
-    if(res.status !== 200) {
-      const err = new Error(`Failed to fetch image ${url}. httpStatusCode=${res.status}. ${res.statusText}`)
-      console.error(err)
-    } else {
-      pipeline(res.data, stream)
-    }
-  })
+  args.image.setStream(axiosStream(url))
 }
 
 interface OccupancyTopic {
@@ -155,7 +130,6 @@ function findOccupancyTopic(devices:Device[], topic:string):OccupancyTopic|null 
       }
     }
   }
-
   return null
 }
 
@@ -284,16 +258,21 @@ export const stopListeningToEvents = async (cameraName:string) => {
 
 export const isEventOngoing = async(args: {frigateURL:string, eventId:string}):Promise<boolean> => {
   const url = `${args.frigateURL}/api/events/${args.eventId}`
-  const res = await axios({
-    method: 'get',
-    url: url,
-    responseType: 'json'
-  })
-  if(res.status !== 200) {
-    const err = new Error(`Failed to fetch image ${url}. httpStatusCode=${res.status}. ${res.statusText}`)
-    console.log(err)
+  try {
+    const res = await axios({
+      method: 'get',
+      url: url,
+      responseType: 'json'
+    })
+    if(res.status !== 200) {
+      const err = new Error(`Failed to fetch image ${url}. httpStatusCode=${res.status}. ${res.statusText}`)
+      console.error(err)
+      return false
+    } else {
+      return !res.data.end_time
+    }
+  } catch(err) {
+    console.error(err)
     return false
-  } else {
-    return !res.data.end_time
   }
 }

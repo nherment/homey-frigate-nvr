@@ -91,7 +91,7 @@ class MyDriver extends Homey.Driver {
             frigateURL: frigateAddress,
             mqttUsername: mqttConfig.user,
             mqttPassword: mqttConfig.password
-          },
+          }
         })
       }
       devices.sort((a, b) => {

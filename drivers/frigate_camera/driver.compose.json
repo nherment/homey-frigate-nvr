@@ -3,7 +3,7 @@
     "en": "Camera"
   },
   "class": "camera",
-  "capabilities": [],
+  "capabilities": ["occupancy", "person_detected"],
   "platforms": [
     "local"
   ],

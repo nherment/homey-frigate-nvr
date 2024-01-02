@@ -1,5 +1,5 @@
 {
-  "id": "net.arkhaios.homey-frigate",
+  "id": "video.frigate",
   "version": "1.0.5",
   "compatibility": ">=5.0.0",
   "sdk": 3,
