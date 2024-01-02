@@ -16,5 +16,8 @@
   },
   "1.0.5": {
     "en": "Fix settings labelling issues"
+  },
+  "1.0.6": {
+    "en": "Improve error handling, fix device feed/capability order issue"
   }
 }
