@@ -2,8 +2,8 @@ import { Image } from "homey";
 import axios from "axios";
 import { FrigateNVRConfig, FrigateNVREventHandler, FrigateNVROccupancyHandler, MQTTFrigateEvent, MQTTOccupancy } from "./types";
 import mqtt, { IClientOptions, MqttClient } from 'mqtt';
-import { pipeline } from 'node:stream/promises'
-import { Writable } from "node:stream";
+import { pipeline } from 'node:stream'
+import { Readable, Writable } from "node:stream";
 
 export const fetchFrigateConfig = async(frigateURL:string) => {
   const response = await axios.get<FrigateNVRConfig>(`${frigateURL}/api/config`, {
@@ -28,8 +28,11 @@ export const axiosStream = (url:string):(stream:Writable)=>Promise<void> => {
         const err = new Error(`Failed to fetch image ${url}. httpStatusCode=${res.status}. ${res.statusText}`)
         console.error(err)
       }
-      pipeline(res.data, stream).catch(err => {
-        console.error(`Failed to pipe image ${url}. Error: ${err.message}`)
+      const readable:Readable = res.data
+      pipeline(readable, stream, (err:any) => {
+        if(err) {
+          console.error(`Failed to pipe image ${url}. Error: ${err.message}`)
+        }
       })
     } catch(err:any) {
       console.error(`Failed to fetch ${url}. Error: ${err.message}`)
