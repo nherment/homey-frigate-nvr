@@ -3,7 +3,7 @@
     "en": "Camera"
   },
   "class": "camera",
-  "capabilities": ["occupancy", "person_detected"],
+  "capabilities": ["occupancy", "person_detected", "rtsp_feed"],
   "platforms": [
     "local"
   ],

@@ -63,26 +63,19 @@ class Camera extends Homey.Device {
   }
 
   async _setupCapabilities() {
+    const capabilities = this.getCapabilities()
     if(this.frigateCameraName === 'birdseye') {
-      const capabilities = this.getCapabilities()
       if(capabilities.includes('occupancy')) {
         await this.removeCapability('occupancy')
       }
       if(capabilities.includes('person_detected')) {
         await this.removeCapability('person_detected')
       }
+      if(!capabilities.includes('rtsp_feed')) {
+        await this.addCapability('rtsp_feed')
+      }
     }
   }
-
-  // async logToTimeline() {
-  //   await this.homey.flow.({
-  //     uri: 'homey:manager:notifications',
-  //     id: 'create_notification',
-  //     args: {
-  //     text: 'some text ' + someVariable + ' some more text'
-  //     },
-  //   });
-  // }
 
   async _setupImages() {
 
@@ -235,6 +228,7 @@ class Camera extends Homey.Device {
       await this._setEventEnded(trackedObject, eventId)
     }
   }
+
 
   async _mqttHandleOccupancyChange(occupancy: MQTTOccupancy) {
     if(occupancy.trackedObject === 'person') {
