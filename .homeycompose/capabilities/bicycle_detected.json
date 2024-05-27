@@ -1,0 +1,21 @@
+{
+  "type": "boolean",
+  "title": { "en": "Bicycle detected" },
+  "insightsTitleTrue": {
+    "en": "Bicycle detected"
+  },
+  "insightsTitleFalse": {
+    "en": "No bicycle detected"
+  },
+  "titleTrue": {
+    "en": "Bicycle detected"
+  },
+  "titleFalse": {
+    "en": "No detection"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "uiQuickAction": false,
+  "icon": "/assets/capabilities/bike.svg"
+}

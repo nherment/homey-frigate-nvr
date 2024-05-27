@@ -13,7 +13,6 @@ class MyDriver extends Homey.Driver {
     this.log('MyDriver has been initialized');
   }
 
-
   async onPair(session: PairSession): Promise<void> {
     this.log('showing view')
     await session.showView('frigate_hostname')

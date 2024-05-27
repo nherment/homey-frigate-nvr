@@ -1,0 +1,21 @@
+{
+  "type": "boolean",
+  "title": { "en": "Dog detected" },
+  "insightsTitleTrue": {
+    "en": "Dog detected"
+  },
+  "insightsTitleFalse": {
+    "en": "No dog detected"
+  },
+  "titleTrue": {
+    "en": "Dog detected"
+  },
+  "titleFalse": {
+    "en": "No detection"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "uiQuickAction": false,
+  "icon": "/assets/capabilities/dog.svg"
+}

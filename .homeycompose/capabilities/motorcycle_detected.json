@@ -1,0 +1,21 @@
+{
+    "type": "boolean",
+    "title": { "en": "Motorcycle detected" },
+    "insightsTitleTrue": {
+      "en": "Motorcycle detected"
+    },
+    "insightsTitleFalse": {
+      "en": "No motorcycle detected"
+    },
+    "titleTrue": {
+      "en": "Motorcycle detected"
+    },
+    "titleFalse": {
+      "en": "No detection"
+    },
+    "getable": true,
+    "setable": false,
+    "uiComponent": "sensor",
+    "uiQuickAction": false,
+    "icon": "/assets/capabilities/bell.svg"
+  }

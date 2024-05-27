@@ -4,6 +4,7 @@ import { IClientOptions } from 'mqtt';
 
 import { MQTTFrigateEvent, MQTTOccupancy } from './types';
 import * as frigateAPI from './frigateAPI';
+import { Logger, getLogger } from '../../utils/logging';
 
 interface DeviceSettings {
   frigateURL: string
@@ -24,8 +25,8 @@ interface DeviceStore {
 function shouldTriggerObjectDetection(event:MQTTFrigateEvent):boolean {
   return !event.after.false_positive &&
     event.after.has_snapshot &&
-    event.after.has_clip &&
-    (event.type === 'new' || event.type === 'update') &&
+    // event.after.has_clip &&
+    (event.type === 'new') &&
     (!!event.before.label || !!event.after.label)
 }
 
@@ -42,6 +43,7 @@ class Camera extends Homey.Device {
   lastTrigger:number = 0
   latestImage:Image|null = null
   activeEvents:Map<string, Set<string>> = new Map<string, Set<string>>()
+  logger:Logger|undefined
 
   /**
    * onInit is called when the device is initialized.
@@ -52,14 +54,18 @@ class Camera extends Homey.Device {
     this.frigateURL = settings.frigateURL
     this.detectionThrottleInMilliseconds = settings.detectionThrottle * 1000
     this.frigateCameraName = store.cameraName
-    this.trackedObjects = store.trackedObjects.split(',')
+    this.trackedObjects = store.trackedObjects.split(',').map(s=>s.trim())
+
+    const fileLoggingEnabled = this.homey.settings.get('loggingEnabled') || false
+    const logLevel = this.homey.settings.get('logLevel') || false
+    this.logger = getLogger(this.homey, fileLoggingEnabled, logLevel)
 
     await this._setupImages()
     await this._setupCapabilities()
     await this.unsetWarning()
     await this._connectToMQTT()
 
-    this.log(`Camera ${this.frigateCameraName} has been initialized`);
+    this.logger.info(`Camera ${this.frigateCameraName} has been initialized`);
   }
 
   async _setupCapabilities() {
@@ -71,9 +77,9 @@ class Camera extends Homey.Device {
       if(capabilities.includes('person_detected')) {
         await this.removeCapability('person_detected')
       }
-      if(!capabilities.includes('rtsp_feed')) {
-        await this.addCapability('rtsp_feed')
-      }
+      // if(!capabilities.includes('rtsp_feed')) {
+      //   await this.addCapability('rtsp_feed')
+      // }
     }
   }
 
@@ -169,7 +175,7 @@ class Camera extends Homey.Device {
   async _continuousCheckIfEventStillOngoing(trackedObject:string, eventId:string) {
     setTimeout(async () => {
       if(this._isEventActive(trackedObject, eventId)) {
-        const ongoing = await frigateAPI.isEventOngoing({frigateURL:this.frigateURL!, eventId})
+        const ongoing = await frigateAPI.isEventOngoing({frigateURL:this.frigateURL!, eventId, logger: this.logger!})
         if(ongoing) {
           await this._continuousCheckIfEventStillOngoing(trackedObject, eventId)
         } else {
@@ -260,7 +266,7 @@ class Camera extends Homey.Device {
       await this._disconnectFromMQTT()
       await this._connectToMQTT()
     }
-    this.log("MyDevice settings where changed");
+    this.logger!.info("MyDevice settings where changed");
   }
 
   async _syncFrigateData(settings:DeviceSettings) {
@@ -312,7 +318,8 @@ class Camera extends Homey.Device {
           trackedObjects: this.trackedObjects,
           mqttTopicPrefix: store.mqttTopicPrefix,
           eventHandler: this._mqttHandleEvent.bind(this),
-          occupancyHandler: this._mqttHandleOccupancyChange.bind(this)
+          occupancyHandler: this._mqttHandleOccupancyChange.bind(this),
+          logger: this.logger!
         })
         await this.unsetWarning()
       } catch(err:any) {

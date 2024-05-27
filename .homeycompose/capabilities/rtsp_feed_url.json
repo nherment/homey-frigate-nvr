@@ -1,8 +1,0 @@
-{
-  "type": "text",
-  "title": { "en": "RTSP feed URL" },
-  "uiComponent": "sensor",
-  "getable": true,
-  "setable": false,
-  "icon": "/assets/capabilities/group.svg"
-}

@@ -22,5 +22,17 @@
   },
   "1.0.7": {
     "en": "Fix crash bug"
+  },
+  "1.1.0": {
+    "en": "Added logging to a local file (limited to 1MB) for improved debugging. Added detection of dogs, cats, (motor)cycles and cars."
+  },
+  "1.1.1": {
+    "en": "Improved MQTT interface by catching errors and other events"
+  },
+  "1.1.2": {
+    "en": "Improve error catching and logging"
+  },
+  "1.1.3": {
+    "en": "Ability to copy logs and share them manually"
   }
 }

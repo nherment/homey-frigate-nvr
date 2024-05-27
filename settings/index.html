@@ -1,0 +1,128 @@
+<html>
+  <head>
+    <!-- The '/homey.js' script must be included in your settings view to work -->
+    <script
+      type="text/javascript"
+      src="/homey.js"
+      data-origin="settings"
+    ></script>
+    <style type="text/css" media="screen">
+        dialog {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        dialog textarea {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+        }
+    </style>
+  </head>
+  <body>
+    <header class="homey-header">
+      <h1 class="homey-title">
+        Settings
+      </h1>
+    </header>
+
+    <fieldset class="homey-form-checkbox-set">
+        <legend class="homey-form-checkbox-set-title">Logging</legend>
+    
+        <label class="homey-form-checkbox">
+          <input class="homey-form-checkbox-input" type="checkbox" name="loggingEnabled" id="loggingEnabled"/>
+          <span class="homey-form-checkbox-checkmark"></span>
+          <span class="homey-form-checkbox-text">Record logs</span>
+        </label>
+    
+        <label class="homey-form-label" for="logLevel">Logging level</label>
+        <select class="homey-form-select" name="logLevel" id="logLevel" >
+          <option value="error">ERROR</option>
+          <option value="info">INFO</option>
+        </select>
+    </fieldset>
+
+    <button id="save" class="homey-button-primary-full">Save changes</button>
+    <br/>
+    <br/>
+    <button id="showLogs" class="homey-button-secondary-shadow">Show logs</button>
+    <button id="deleteLogs" class="homey-button-danger-shadow homey-button-small">Delete logs</button>
+
+    <dialog id="logsDialog">
+      <fieldset class="homey-form-checkbox-set">
+        <button id="hideLogs" autofocus>Close</button>
+        <button id="copyLogs">Copy logs</button>
+        <br />
+        <textarea class="homey-form-textarea" id="logs" rows="50" cols="50"></textarea>
+      </fieldset>
+    </dialog>
+
+    <script type="text/javascript">
+      // a method named 'onHomeyReady' must be present in your code
+      function onHomeyReady(Homey) {
+        // Tell Homey we're ready to be displayed
+        Homey.ready();
+
+        var loggingEnabledElement = document.getElementById("loggingEnabled");
+        var logLevelElement = document.getElementById("logLevel");
+        var saveElement = document.getElementById("save");
+        var logsElement = document.getElementById("logs");
+        var showLogsElement = document.getElementById("showLogs");
+        var hideLogsElement = document.getElementById("hideLogs");
+        var logsDialogElement = document.getElementById("logsDialog");
+
+        Homey.get("loggingEnabled", function (err, loggingEnabled) {
+          if (err) return Homey.alert(err);
+          loggingEnabledElement.checked = !!loggingEnabled;
+        });
+
+        Homey.get("logLevel", function (err, logLevel) {
+          if (err) return Homey.alert(err);
+          logLevelElement.value = logLevel || 'error';
+        });
+
+        saveElement.addEventListener("click", function (e) {
+          Homey.set("loggingEnabled", loggingEnabledElement.checked, function (err) {
+            if (err) return Homey.alert(err);
+            Homey.set("logLevel", logLevelElement.value, function (err) {
+              if (err) return Homey.alert(err);
+              Homey.alert('Saved. Restart the app for the new settings to take effect.')
+            });
+          });
+        });
+        
+        showLogsElement.addEventListener("click", function (e) {
+          Homey.api("GET", "/logs", function (err, result) {
+            if (err) return Homey.alert(err);
+            logsDialogElement.showModal()
+            logsElement.value = result
+          });
+        });
+        hideLogsElement.addEventListener("click", function (e) {
+          logsDialogElement.close()
+        });
+
+        
+        var deleteLogsElement = document.getElementById("deleteLogs");
+        deleteLogsElement.addEventListener("click", function (e) {
+          Homey.api("DELETE", "/logs", function (err, result) {
+            if (err) return Homey.alert(err);
+            Homey.alert('Logs deleted')
+          });
+        });
+
+        
+        var copyLogsElement = document.getElementById("copyLogs");
+        copyLogsElement.addEventListener("click", function (e) {
+          logsElement.select();
+          document.execCommand("copy");
+          Homey.alert("Logs copied");
+        });
+
+      }
+    </script>
+  </body>
+</html>

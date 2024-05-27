@@ -3,7 +3,7 @@
     "en": "Camera"
   },
   "class": "camera",
-  "capabilities": ["occupancy", "person_detected", "rtsp_feed"],
+  "capabilities": ["occupancy", "person_detected"],
   "platforms": [
     "local"
   ],
@@ -111,7 +111,7 @@
       "id": "trackedObjects",
       "type": "string",
       "label": { "en": "Types of objects tracked" },
-      "value": "person",
+      "value": "person,cat,dog,car,bicycle,motorcycle",
       "hint": { "en": "The types of objects tracked by this camera" }
     }
   ],

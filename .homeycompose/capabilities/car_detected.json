@@ -1,0 +1,21 @@
+{
+  "type": "boolean",
+  "title": { "en": "Car detected" },
+  "insightsTitleTrue": {
+    "en": "Car detected"
+  },
+  "insightsTitleFalse": {
+    "en": "Nobody detected"
+  },
+  "titleTrue": {
+    "en": "Car detected"
+  },
+  "titleFalse": {
+    "en": "No detection"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "uiQuickAction": false,
+  "icon": "/assets/capabilities/car.svg"
+}

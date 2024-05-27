@@ -66,6 +66,11 @@ Snapshot of the last person detected:
 Cameras provide some permanent tokens:
 - `Occupancy`: The number of persons currently detected. I found occupancy to be quite unreliable but you can try to use it.
 - `Person detected`
+- `Dog detected`
+- `Cat detected`
+- `Car detected`
+- `Bicycle detected`
+- `Motorcycle detected`
 
 ## MQTT
 

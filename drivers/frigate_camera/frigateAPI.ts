@@ -4,6 +4,7 @@ import { FrigateNVRConfig, FrigateNVREventHandler, FrigateNVROccupancyHandler, M
 import mqtt, { IClientOptions, MqttClient } from 'mqtt';
 import { pipeline } from 'node:stream'
 import { Readable, Writable } from "node:stream";
+import { Logger } from "../../utils/logging";
 
 export const fetchFrigateConfig = async(frigateURL:string) => {
   const response = await axios.get<FrigateNVRConfig>(`${frigateURL}/api/config`, {
@@ -26,16 +27,16 @@ export const axiosStream = (url:string):(stream:Writable)=>Promise<void> => {
       })
       if(res.status !== 200) {
         const err = new Error(`Failed to fetch image ${url}. httpStatusCode=${res.status}. ${res.statusText}`)
-        console.error(err)
+        console.error({msg: err.message})
       }
       const readable:Readable = res.data
       pipeline(readable, stream, (err:any) => {
         if(err) {
-          console.error(`Failed to pipe image ${url}. Error: ${err.message}`)
+          console.error({msg: `Failed to pipe image ${url}. Error: ${err.message}`})
         }
       })
     } catch(err:any) {
-      console.error(`Failed to fetch ${url}. Error: ${err.message}`)
+      console.error({msg: `Failed to fetch ${url}. Error: ${err.message}`})
     }
   }
 }
@@ -89,36 +90,32 @@ interface MQTTConnection {
   devices: Device[]
 }
 
-const connections:MQTTConnection[] = []
+let currentConnection:MQTTConnection|null = null;
 
-const handleFrigateEvent = async (connection:MQTTConnection, event:MQTTFrigateEvent) => {
+const handleFrigateEvent = async (connection:MQTTConnection, event:MQTTFrigateEvent, logger:Logger) => {
   for(let device of connection.devices) {
     if(event.after.camera === device.cameraName) {
       try {
         device.eventHandler(event).catch(err => {
-          console.error(`Asynchronous error while executing event listener for camera ${device.cameraName}`)
-          console.error(err)
+          logger.error({msg: `Asynchronous error while executing event listener for camera ${device.cameraName}`, error: err.message, stack: err.stack})
         })
         return; // Expect a single device per camera
-      } catch(err) {
-        console.error(`Synchronous error while executing event listener for camera ${device.cameraName}`)
-        console.error(err)
+      } catch(err:any) {
+        logger.error({msg: `Synchronous error while executing event listener for camera ${device.cameraName}`, error: err.message, stack: err.stack})
       }
     }
   }
 }
-const handleOccupancyChange = async (connection:MQTTConnection, occupancy:MQTTOccupancy) => {
+const handleOccupancyChange = async (connection:MQTTConnection, occupancy:MQTTOccupancy, logger:Logger) => {
   for(let device of connection.devices) {
     if(occupancy.cameraName === device.cameraName) {
       try {
         device.occupancyHandler(occupancy).catch(err => {
-          console.error(`Asynchronous error while executing event listener for camera ${device.cameraName}`)
-          console.error(err)
+          logger.error({msg: `Asynchronous error while executing event listener for camera ${device.cameraName}`, error: err.message, stack: err.stack})
         })
         return; // Expect a single device per camera
-      } catch(err) {
-        console.error(`Synchronous error while executing event listener for camera ${device.cameraName}`)
-        console.error(err)
+      } catch(err:any) {
+        logger.error({msg: `Synchronous error while executing event listener for camera ${device.cameraName}`, error: err.message, stack: err.stack})
       }
     }
   }
@@ -136,22 +133,12 @@ function findOccupancyTopic(devices:Device[], topic:string):OccupancyTopic|null 
   return null
 }
 
-const connectToMQTTServer = async (mqttConfig:IClientOptions, mqttTopicPrefix:string):Promise<MQTTConnection> => {
+const connectToMQTTServer = async (mqttConfig:IClientOptions, mqttTopicPrefix:string, logger:Logger):Promise<MQTTConnection> => {
   mqttConfig.clientId = 'homey-frigate-nvr'
-  let currentConnection = connections.find(conn => {
-    return conn.config.host == mqttConfig.host &&
-      conn.config.port == mqttConfig.port &&
-      conn.topicPrefix == mqttTopicPrefix &&
-      conn.config.username == mqttConfig.username &&
-      conn.config.password == mqttConfig.password
-  })
-
   if(!currentConnection) {
 
-    console.log(`Creating new connection to MQTT server ${mqttConfig.username}@${mqttConfig.host}:${mqttConfig.port}`)
-
-    const client = mqtt.connect(`mqtt://${mqttConfig.host}:${mqttConfig.port}`, mqttConfig)
-    client.setMaxListeners(100) // avoid warnings when many cameras initialised and listen to the connect event
+    logger.info(`Creating new connection to MQTT server ${mqttConfig.username}@${mqttConfig.host}:${mqttConfig.port}`)
+    let client:MqttClient = mqtt.connect(`mqtt://${mqttConfig.host}:${mqttConfig.port}`, mqttConfig)
     currentConnection = {
       client: client,
       config: mqttConfig,
@@ -159,43 +146,69 @@ const connectToMQTTServer = async (mqttConfig:IClientOptions, mqttTopicPrefix:st
       devices: []
     }
 
-    connections.push(currentConnection!)
+    currentConnection.client = client
+    client.setMaxListeners(100) // avoid warnings when many cameras initialised and listen to the connect event
+    client.on('error', (err) => {
+      logger.error(err)
+    })
+    // client.on('reconnect', () => {
+    //   logger.info({msg: 'Client attempting to reconnect', id: thisClientId, mqtt: {username: mqttConfig.username, host: mqttConfig.host, port: mqttConfig.port}})
+    // })
+    // client.on('close', () => {
+    //   logger.info({msg: 'Client closed', id: thisClientId, mqtt: {username: mqttConfig.username, host: mqttConfig.host, port: mqttConfig.port}})
+    // })
+    // client.on('disconnect', () => {
+    //   logger.info({msg: 'Client disconnected by broker', id: thisClientId, mqtt: {username: mqttConfig.username, host: mqttConfig.host, port: mqttConfig.port}})
+    // })
+    const eventsTopic = `${mqttTopicPrefix}/events`
 
-    client.on('connect', async () => {
-      const eventsTopic = `${mqttTopicPrefix}/events`
-      await client.subscribeAsync(eventsTopic)
-      console.log(`Listening to topic ${eventsTopic}`)
-
-      client.on('message', async (topic, message) => {
-        try {
-          if(topic === eventsTopic && currentConnection) {
-            const event:MQTTFrigateEvent = JSON.parse(message.toString())
-            handleFrigateEvent(currentConnection, event)
-          } else if(currentConnection) {
-            const occupancyTopic = findOccupancyTopic(currentConnection.devices, topic)
-            if(occupancyTopic) {
-              handleOccupancyChange(currentConnection, {
-                cameraName: occupancyTopic.cameraName,
-                trackedObject: occupancyTopic.trackedObject,
-                count: parseInt(message.toString(), 10)
-              })
-            }
+    client.on('message', async (topic:string, message:Buffer) => {
+      try {
+        if(topic === eventsTopic && currentConnection) {
+          const event:MQTTFrigateEvent = JSON.parse(message.toString())
+          handleFrigateEvent(currentConnection, event, logger)
+        } else if(currentConnection) {
+          const occupancyTopic = findOccupancyTopic(currentConnection.devices, topic)
+          if(occupancyTopic) {
+            handleOccupancyChange(currentConnection, {
+              cameraName: occupancyTopic.cameraName,
+              trackedObject: occupancyTopic.trackedObject,
+              count: parseInt(message.toString(), 10)
+            }, logger)
           }
-        } catch(err) {
-          console.error('Failed to parse MQTT message as JSON')
         }
-      })
+      } catch(err) {
+        logger.error('Failed to parse MQTT message as JSON')
+        logger.error(err)
+      }
+    })
+    
+    client.on('connect', async (ack) => {
+      logger.info({msg: 'Client connected', mqtt: {username: mqttConfig.username, host: mqttConfig.host, port: mqttConfig.port}, ack})
+      try {
+        await client.unsubscribeAsync(eventsTopic)
+      } catch(err) {
+        logger.info(`Failed to unsubscribe from ${eventsTopic}.`)
+      }
+      try {
+        await client.subscribeAsync(eventsTopic)
+      } catch(err) {
+        logger.error(`Failed to subscribe to ${eventsTopic}.`)
+        logger.error(err)
+        return
+      }
+      logger.info(`Listening to topic ${eventsTopic} on MQTT server ${mqttConfig.username}@${mqttConfig.host}:${mqttConfig.port}`)
     })
 
   } else if(!currentConnection.client.connected) {
-    console.log('Reusing MQTT server connection but waiting for client to connect')
+    logger.info('Reusing MQTT server connection but waiting for client to connect')
     await new Promise<void>((resolve) => {
       currentConnection!.client.on('connect', () => {
         resolve()
       })
     })
   } else {
-    console.log('Reusing MQTT server connection')
+    logger.info('Reusing MQTT server connection')
   }
   return currentConnection
 }
@@ -211,19 +224,18 @@ export const listenToEvents = async (config: {
   cameraName:string,
   trackedObjects:string[],
   eventHandler:FrigateNVREventHandler,
-  occupancyHandler:FrigateNVROccupancyHandler
+  occupancyHandler:FrigateNVROccupancyHandler,
+  logger: Logger
 }) => {
 
-  const connection = await connectToMQTTServer(config.mqttConfig, config.mqttTopicPrefix)
-  const occupancyTopics = []
+  config.logger.info(`Camera ${config.cameraName} connecting to MQTT`)
+  const connection = await connectToMQTTServer(config.mqttConfig, config.mqttTopicPrefix, config.logger)
 
-  for(let trackedObject of config.trackedObjects) {
-    occupancyTopics.push({
-      topic: buildOccupancyTopic(config.mqttTopicPrefix, config.cameraName, trackedObject),
-      cameraName: config.cameraName,
-      trackedObject
-    })
-  }
+  const occupancyTopics = [{
+    topic: buildOccupancyTopic(config.mqttTopicPrefix, config.cameraName, 'person'),
+    cameraName: config.cameraName,
+    trackedObject: 'person'
+  }]
 
   const device = {
     cameraName: config.cameraName,
@@ -233,33 +245,32 @@ export const listenToEvents = async (config: {
     occupancyHandler: config.occupancyHandler
   }
   for(let occupancyTopic of occupancyTopics) {
-    console.log(`Listening to occupancy topic ${occupancyTopic.topic}`)
+    config.logger.info(`Camera ${config.cameraName} listening to occupancy topic ${occupancyTopic.topic}`)
     await connection.client.subscribeAsync(occupancyTopic.topic)
   }
   connection.devices.push(device)
 }
 
 export const stopListeningToEvents = async (cameraName:string) => {
-  for(let i=connections.length - 1 ; i>=0 ; i--) {
-    const connection = connections[i]
-    for(let j=connection.devices.length - 1 ; j>=0 ; j--) {
-      const device = connection.devices[j]
+  if(currentConnection) {
+    for(let j=currentConnection.devices.length - 1 ; j>=0 ; j--) {
+      const device = currentConnection.devices[j]
 
       for(let occupancyTopic of device.occupancyTopics) {
-        await connection.client.unsubscribeAsync(occupancyTopic.topic)
+        await currentConnection.client.unsubscribeAsync(occupancyTopic.topic)
       }
       if(device.cameraName === cameraName) {
-        connection.devices.splice(j, 1)
+        currentConnection.devices.splice(j, 1)
       }
     }
-    if(connection.devices.length === 0) {
-      connection.client.end()
-      connections.splice(i, 1)
+    if(currentConnection.devices.length === 0) {
+      currentConnection.client.end()
+      currentConnection = null
     }
   }
 }
 
-export const isEventOngoing = async(args: {frigateURL:string, eventId:string}):Promise<boolean> => {
+export const isEventOngoing = async(args: {frigateURL:string, eventId:string, logger:Logger}):Promise<boolean> => {
   const url = `${args.frigateURL}/api/events/${args.eventId}`
   try {
     const res = await axios({
@@ -269,13 +280,13 @@ export const isEventOngoing = async(args: {frigateURL:string, eventId:string}):P
     })
     if(res.status !== 200) {
       const err = new Error(`Failed to fetch image ${url}. httpStatusCode=${res.status}. ${res.statusText}`)
-      console.error(err)
+      args.logger.error(err)
       return false
     } else {
       return !res.data.end_time
     }
   } catch(err) {
-    console.error(err)
+    args.logger.error(err)
     return false
   }
 }
