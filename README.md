@@ -66,15 +66,24 @@ Snapshot of the last person detected:
 Cameras provide some permanent tokens:
 - `Occupancy`: The number of persons currently detected. I found occupancy to be quite unreliable but you can try to use it.
 - `Person detected`
-- `Dog detected`
-- `Cat detected`
-- `Car detected`
-- `Bicycle detected`
-- `Motorcycle detected`
 
 ## MQTT
 
 By default Homey will use the same credentials as Frigate has them defined from the configuration. This can be changed later per camera.
+
+## Events
+
+The Homey app for Frigate filters events and does not propagate all events it receives from the MQTT server.
+
+The following [events](https://docs.frigate.video/integrations/mqtt/#frigateevents) are ignored:
+- The event is flagged as a `false_positive` by Frigate
+- The event is missing a snapshot image (has_snapshot)
+- The detected object is stationary (both in the before & after fields of the mqtt event)
+- The event does not have a label. i.e. it is not possible to infer the type of object being tracked.
+- Any event that has already been triggered by Homey will not trigger again. This means that subsequent tracking events sent by Frigate are ignored.
+
+This plugin will recognize all types of objects tracked by Frigate and passes on the detected objects onto any flow you create.
+
 
 
 ## Roadmap

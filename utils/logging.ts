@@ -73,9 +73,6 @@ export class Logger {
       // } else {
       //   console.info(message)
       // }
-      if(this.homeyLogger)  {
-        this.homeyLogger.log(message)
-      }
       if(this.logLevel === 'error' && level === 'info') {
         return
       }
@@ -89,6 +86,9 @@ export class Logger {
           msg: message.message,
           stack: message.stack
         }
+      }
+      if(this.homeyLogger)  {
+        this.homeyLogger.log(JSON.stringify(message))
       }
       const timestamp = (new Date()).toISOString()
       const messageStr = JSON.stringify(message)
@@ -122,3 +122,5 @@ export async function getLogsFromFile() {
 export async function emptyLogFile() {
   return await fs.writeFile(LogFilePath, '', 'utf8')
 }
+
+enforceFileSize().catch(err => console.error(err))

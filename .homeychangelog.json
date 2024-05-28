@@ -34,5 +34,14 @@
   },
   "1.1.3": {
     "en": "Ability to copy logs and share them manually"
+  },
+  "1.1.4": {
+    "en": "Process events even if a video clip is missing"
+  },
+  "1.1.5": {
+    "en": "Improved logging and fix handling of stationary objects"
+  },
+  "1.1.6": {
+    "en": "Camera event debounce increased to 2 minutes. Improved logging of event filtering."
   }
 }

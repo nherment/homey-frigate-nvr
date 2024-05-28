@@ -22,14 +22,6 @@ interface DeviceStore {
   mqttEnabled: boolean
 }
 
-function shouldTriggerObjectDetection(event:MQTTFrigateEvent):boolean {
-  return !event.after.false_positive &&
-    event.after.has_snapshot &&
-    // event.after.has_clip &&
-    (event.type === 'new') &&
-    (!!event.before.label || !!event.after.label)
-}
-
 function capitalize(str:string) {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
@@ -134,6 +126,45 @@ class Camera extends Homey.Device {
     this.lastTrigger = Date.now()
   }
 
+  
+
+  _shouldTriggerObjectDetection(event:MQTTFrigateEvent):boolean {
+    const eventInfo = {
+      camera: event.after.camera,
+      msg: 'Event ignored',
+      reason: '',
+      label: event.after.label,
+      id: event.before?.id || event.after?.id
+    }
+    if(event.after.false_positive) {
+      eventInfo.reason = 'false_positive'
+      this.logger?.info(eventInfo)
+      return false
+    }
+    if(!event.before?.has_snapshot || !event.after?.has_snapshot) {
+      eventInfo.reason = 'no_snapshot'
+      this.logger?.info(eventInfo)
+      return false
+    }
+    if(event.before.stationary && event.after.stationary) {
+      eventInfo.reason = 'stationary'
+      this.logger?.info(eventInfo)
+      return false
+    }
+    if(event.type !== 'new' && event.type !== 'update') {
+      eventInfo.reason = 'neither_new_not_update'
+      this.logger?.info(eventInfo)
+      return false
+    }
+    if(!event.before.label && !event.after.label) {
+      eventInfo.reason = 'no_label'
+      this.logger?.info(eventInfo)
+      return false
+    }
+
+    return true
+  }
+
   async _setEventActive(trackedObject:string, eventId:string) {
     if(!this.activeEvents.has(trackedObject)) {
       this.activeEvents.set(trackedObject, new Set<string>())
@@ -194,13 +225,15 @@ class Camera extends Homey.Device {
       return
     }
 
-    if(shouldTriggerObjectDetection(event) && !this._isEventActive(trackedObject, eventId)) {
+    if(this._shouldTriggerObjectDetection(event) && !this._isEventActive(trackedObject, eventId)) {
       await this._setEventActive(trackedObject, eventId)
-
-      if(!this._shouldThrottle()) {
+      // console.log(`${(new Date()).toUTCString()} - ${this.frigateCameraName} - ${trackedObject} - ${eventId} - ${JSON.stringify(event)}`)
+      if(this._shouldThrottle()) {
+        this.logger?.info({ camera: this.frigateCameraName, msg: 'Event ignored', trackedObject, id:eventId, reason: 'throttling'})
+      } else {
         this._recordTriggerForThrottling()
 
-        // this.log(`Object detected ${this.frigateCameraName}/${trackedObject}. EventId=${eventId}`)
+        this.logger?.info({ camera: this.frigateCameraName, msg: 'Object detected', trackedObject, id:eventId})
 
         const snapshot = await this.homey.images.createImage()
         const thumbnail = await this.homey.images.createImage()
@@ -231,6 +264,7 @@ class Camera extends Homey.Device {
         })
       }
     } else if(trackedObject && (event.type === 'end' || event.after.false_positive)) {
+      this.logger?.info({camera: this.frigateCameraName, msg: 'Ending event', false_positive: event.after.false_positive, id: event.after.id})
       await this._setEventEnded(trackedObject, eventId)
     }
   }

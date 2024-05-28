@@ -39,7 +39,7 @@ interface MQTTFrigateEventState {
   start_time: number,
   end_time: number | null,
   score: number,
-  stationary: false,
+  stationary: boolean,
   motionless_count: number,
   position_changes: number,
   has_clip: boolean,
