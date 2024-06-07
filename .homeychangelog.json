@@ -46,5 +46,8 @@
   },
   "1.1.7": {
     "en": "Trigger events even if snapshots are not present. Placeholder images will be used instead."
+  },
+  "1.2.0": {
+    "en": "Events have zones. Ability to ignore events with no snapshot. Ability to have unique flow events trigger more than once."
   }
 }
