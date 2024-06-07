@@ -5,6 +5,7 @@ import { IClientOptions } from 'mqtt';
 import { MQTTFrigateEvent, MQTTOccupancy } from './types';
 import * as frigateAPI from './frigateAPI';
 import { Logger, getLogger } from '../../utils/logging';
+import path from 'path';
 
 interface DeviceSettings {
   frigateURL: string
@@ -134,15 +135,11 @@ class Camera extends Homey.Device {
       msg: 'Event ignored',
       reason: '',
       label: event.after.label,
+      type: event.type,
       id: event.before?.id || event.after?.id
     }
     if(event.after.false_positive) {
       eventInfo.reason = 'false_positive'
-      this.logger?.info(eventInfo)
-      return false
-    }
-    if(!event.before?.has_snapshot || !event.after?.has_snapshot) {
-      eventInfo.reason = 'no_snapshot'
       this.logger?.info(eventInfo)
       return false
     }
@@ -152,7 +149,7 @@ class Camera extends Homey.Device {
       return false
     }
     if(event.type !== 'new' && event.type !== 'update') {
-      eventInfo.reason = 'neither_new_not_update'
+      eventInfo.reason = 'neither_new_nor_update'
       this.logger?.info(eventInfo)
       return false
     }
@@ -190,7 +187,6 @@ class Camera extends Homey.Device {
       if(trackedObject === 'person') {
         await this.setCapabilityValue('person_detected', false)
       }
-
     }
   }
 
@@ -238,12 +234,20 @@ class Camera extends Homey.Device {
         const snapshot = await this.homey.images.createImage()
         const thumbnail = await this.homey.images.createImage()
 
-        await Promise.all([
-          frigateAPI.getEventSnapshotImage({image: snapshot, frigateURL: this.frigateURL!, eventId}),
-          frigateAPI.getEventThumbnailImage({image: thumbnail, frigateURL: this.frigateURL!, eventId})
-        ])
+        if(event.after.has_snapshot) {
+          await Promise.all([
+            frigateAPI.getEventSnapshotImage({image: snapshot, frigateURL: this.frigateURL!, eventId}),
+            frigateAPI.getEventThumbnailImage({image: thumbnail, frigateURL: this.frigateURL!, eventId})
+          ])
+        } else {
+          snapshot.setPath(path.join(__dirname, '../../assets/images/placeholder_snapshot.jpg'));
+          thumbnail.setPath(path.join(__dirname, '../../assets/images/placeholder_thumbnail.jpg'));
+        }
 
-        let clipURL:string = `${this.frigateURL}/api/events/${eventId}/clip.mp4`
+        let clipURL:string = ''
+        if(event.after.has_clip) {
+          clipURL = `${this.frigateURL}/api/events/${eventId}/clip.mp4`
+        }
 
         this.homey.flow.getDeviceTriggerCard('object-detected').trigger(this, {
           'object': trackedObject,
@@ -251,7 +255,9 @@ class Camera extends Homey.Device {
           'snapshot': snapshot,
           'thumbnail': thumbnail,
           'clipURL': clipURL,
-          'eventId': event.after.id
+          'eventId': event.after.id,
+          'current_zones': (event.after.current_zones || []).join(','),
+          'entered_zones': (event.after.entered_zones || []).join(',')
         })
 
         this.homey.flow.getTriggerCard('all-cameras-object-detected').trigger({
@@ -260,7 +266,9 @@ class Camera extends Homey.Device {
           'snapshot': snapshot,
           'thumbnail': thumbnail,
           'clipURL': clipURL,
-          'eventId': event.after.id
+          'eventId': event.after.id,
+          'current_zones': (event.after.current_zones || []).join(','),
+          'entered_zones': (event.after.entered_zones || []).join(',')
         })
       }
     } else if(trackedObject && (event.type === 'end' || event.after.false_positive)) {

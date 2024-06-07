@@ -28,22 +28,24 @@ export interface FrigateNVRConfig {
 }
 
 interface MQTTFrigateEventState {
-  id: string,
-  camera: string,
-  frame_time: number,
-  snapshot_time: number,
-  label: string | null,
-  sub_label: string | null,
-  top_score: number,
-  false_positive: boolean,
-  start_time: number,
-  end_time: number | null,
-  score: number,
-  stationary: boolean,
-  motionless_count: number,
-  position_changes: number,
-  has_clip: boolean,
+  id: string
+  camera: string
+  frame_time: number
+  snapshot_time: number
+  label: string | null
+  sub_label: string | null
+  top_score: number
+  false_positive: boolean
+  start_time: number
+  end_time: number | null
+  score: number
+  stationary: boolean
+  motionless_count: number
+  position_changes: number
+  has_clip: boolean
   has_snapshot: boolean
+  current_zones: string[]
+  entered_zones: string[]
 }
 
 export interface MQTTFrigateEvent {

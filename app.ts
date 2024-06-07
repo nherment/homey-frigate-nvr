@@ -8,7 +8,6 @@ class MyApp extends Homey.App {
   async onInit() {
     this.homeyLog = new Log({ homey: this.homey });
   }
-
 }
 
 module.exports = MyApp;

@@ -45,6 +45,21 @@
         </select>
     </fieldset>
 
+    <fieldset class="homey-form-checkbox-set">
+        <legend class="homey-form-checkbox-set-title">MQTT</legend>
+        <label class="homey-form-checkbox">
+          <input class="homey-form-text-input" type="checkbox" name="loggingEnabled" id="loggingEnabled"/>
+          <span class="homey-form-checkbox-checkmark"></span>
+          <span class="homey-form-checkbox-text">Record logs</span>
+        </label>
+    
+        <label class="homey-form-label" for="logLevel">Logging level</label>
+        <select class="homey-form-select" name="logLevel" id="logLevel" >
+          <option value="error">ERROR</option>
+          <option value="info">INFO</option>
+        </select>
+    </fieldset>
+
     <button id="save" class="homey-button-primary-full">Save changes</button>
     <br/>
     <br/>
@@ -52,13 +67,31 @@
     <button id="deleteLogs" class="homey-button-danger-shadow homey-button-small">Delete logs</button>
 
     <dialog id="logsDialog">
-      <fieldset class="homey-form-checkbox-set">
-        <button id="hideLogs" autofocus>Close</button>
-        <button id="copyLogs">Copy logs</button>
-        <br />
-        <textarea class="homey-form-textarea" id="logs" rows="50" cols="50"></textarea>
-      </fieldset>
-    </dialog>
+
+    <fieldset class="homey-form-fieldset">
+      <legend class="homey-form-legend">Frigate</legend>
+
+      <div class="homey-form-group">
+        <label class="homey-form-label" for="frigateUrl">Frigate URL</label>
+        <input class="homey-form-input" id="frigateUrl" type="text" value="" />
+      </div>
+      <div class="homey-form-group">
+        <label class="homey-form-label" for="mqttHost">MQTT Host</label>
+        <input class="homey-form-input" id="mqttHost" type="text" value="" />
+      </div>
+      <div class="homey-form-group">
+        <label class="homey-form-label" for="mqttPort">MQTT Port</label>
+        <input class="homey-form-input" id="mqttPort" type="text" value="" />
+      </div>
+      <div class="homey-form-group">
+        <label class="homey-form-label" for="mqttUsername">Username</label>
+        <input class="homey-form-input" id="mqttUsername" type="text" value="" />
+      </div>
+      <div class="homey-form-group">
+        <label class="homey-form-label" for="mqttPassword">Password</label>
+        <input class="homey-form-input" id="mqttPassword" type="password" value="" />
+      </div>
+    </fieldset>
 
     <script type="text/javascript">
       // a method named 'onHomeyReady' must be present in your code

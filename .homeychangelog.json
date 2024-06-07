@@ -43,5 +43,8 @@
   },
   "1.1.6": {
     "en": "Camera event debounce increased to 2 minutes. Improved logging of event filtering."
+  },
+  "1.1.7": {
+    "en": "Trigger events even if snapshots are not present. Placeholder images will be used instead."
   }
 }

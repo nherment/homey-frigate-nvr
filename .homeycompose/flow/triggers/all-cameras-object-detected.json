@@ -67,6 +67,26 @@
       "example": {
         "en": "The id of the related frigate event"
       }
+    },
+    {
+      "type": "string",
+      "name": "current_zones",
+      "title": {
+        "en": "Current zones"
+      },
+      "example": {
+        "en": "Comma separated zones that the object is currently in"
+      }
+    },
+    {
+      "type": "string",
+      "name": "entered_zones",
+      "title": {
+        "en": "Entered zones"
+      },
+      "example": {
+        "en": "Comma separated zones that the object has entered"
+      }
     }
   ]
 }
