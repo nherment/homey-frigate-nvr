@@ -4,6 +4,10 @@
   "main": "app.ts",
   "scripts": {
     "build": "tsc",
+    "start": "homey app run",
+    "install": "homey app install",
+    "validate": "homey app validate --level publish",
+    "publish": "homey app publish",
     "lint": "eslint --ext .js,.ts --ignore-path .gitignore ."
   },
   "devDependencies": {

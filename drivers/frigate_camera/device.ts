@@ -12,6 +12,7 @@ interface DeviceSettings {
   detectionThrottle: number
   mqttUsername: string
   mqttPassword: string
+  uniqueEvents: boolean
 }
 
 interface DeviceStore {
@@ -37,6 +38,8 @@ class Camera extends Homey.Device {
   latestImage:Image|null = null
   activeEvents:Map<string, Set<string>> = new Map<string, Set<string>>()
   logger:Logger|undefined
+  snapshotRequired:boolean = false
+  uniqueEvents:boolean = true
 
   /**
    * onInit is called when the device is initialized.
@@ -46,12 +49,14 @@ class Camera extends Homey.Device {
     const store = this.getStore() as DeviceStore
     this.frigateURL = settings.frigateURL
     this.detectionThrottleInMilliseconds = settings.detectionThrottle * 1000
+    this.uniqueEvents = settings.uniqueEvents || true
     this.frigateCameraName = store.cameraName
     this.trackedObjects = store.trackedObjects.split(',').map(s=>s.trim())
 
     const fileLoggingEnabled = this.homey.settings.get('loggingEnabled') || false
     const logLevel = this.homey.settings.get('logLevel') || false
     this.logger = getLogger(this.homey, fileLoggingEnabled, logLevel)
+    this.snapshotRequired = this.homey.settings.get('snapshotRequired') || false
 
     await this._setupImages()
     await this._setupCapabilities()
@@ -127,8 +132,6 @@ class Camera extends Homey.Device {
     this.lastTrigger = Date.now()
   }
 
-  
-
   _shouldTriggerObjectDetection(event:MQTTFrigateEvent):boolean {
     const eventInfo = {
       camera: event.after.camera,
@@ -137,6 +140,11 @@ class Camera extends Homey.Device {
       label: event.after.label,
       type: event.type,
       id: event.before?.id || event.after?.id
+    }
+    if(this.snapshotRequired && !event.after.has_snapshot) {
+      eventInfo.reason = 'no_snapshot'
+      this.logger?.info(eventInfo)
+      return false
     }
     if(event.after.false_positive) {
       eventInfo.reason = 'false_positive'
@@ -221,7 +229,7 @@ class Camera extends Homey.Device {
       return
     }
 
-    if(this._shouldTriggerObjectDetection(event) && !this._isEventActive(trackedObject, eventId)) {
+    if(this._shouldTriggerObjectDetection(event) && (!this._isEventActive(trackedObject, eventId) || !this.uniqueEvents)) {
       await this._setEventActive(trackedObject, eventId)
       // console.log(`${(new Date()).toUTCString()} - ${this.frigateCameraName} - ${trackedObject} - ${eventId} - ${JSON.stringify(event)}`)
       if(this._shouldThrottle()) {

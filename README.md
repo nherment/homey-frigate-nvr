@@ -7,7 +7,7 @@ This integration brings your existing Frigate NVR object detection into Homey.
 ## Pre-requisites
 
 - A network accessible Frigate NVR instance (from your Homey Pro device)
-- Access from Homey to the MQTT server that Frigate uses. This is optional but Homey triggers will not work without Homey connecting to MQTT.git 
+- Access from Homey to the MQTT server that Frigate uses. This is optional but Homey triggers will not work without Homey connecting to MQTT.git
 
 
 ## Global trigger card
@@ -28,7 +28,7 @@ This card provides a few tokens:
 | entered_zones | string | Comma separated zones that the object has entered. e.g. 'driveway,yard,pathway'.                                  |
 
 
-> [1] Snapshots and thumbnails are replaced by a placeholder image these are missing from the MQTT event. This typically happens if snapshots 
+> [1] Snapshots and thumbnails are replaced by a placeholder image these are missing from the MQTT event. This typically happens if snapshots
 > are disabled from your Frigate configuration or if you have [zone restrictions](https://docs.frigate.video/configuration/zones) enabled.
 
 Below is an example of how the global trigger can be used:
@@ -86,13 +86,13 @@ The following [events](https://docs.frigate.video/integrations/mqtt/#frigateeven
 - The detected object is stationary (both in the before & after fields of the mqtt event)
 - The event does not have a label. i.e. it is not possible to infer the type of object being tracked.
 - Each unique event can only trigger once. This means that subsequent tracking events sent by Frigate are ignored. This behaviour can be problematic if you are relying on zones. This default behaviour can be disabled per camera by updating the [`Unique events`](#camera-configuration) option.
-- Another event triggered  
+- Another event triggered
 
 This plugin will recognize all types of objects tracked by Frigate and passes on the detected objects onto any flow you create.
 
 ### Throttling
 
-Note that the event handling built into Homey throttles the Frigate MQTT events. In other words, an events are skipped if an event recently 
+Note that the event handling built into Homey throttles the Frigate MQTT events. In other words, an events are skipped if an event recently
 triggered. This behaviour is unique to each camera (i.e. events from one camera does not affect other cameras) and can have unintended consequence.
 
 The throttling can be disabled per camera.
@@ -102,22 +102,23 @@ The throttling can be disabled per camera.
 
 ### Application configuration
 
-- MQTT config
-- Logging
-- Ignore events with no snapshot
-- Ignore events with no thumbnail
+It is possible to edit the following at the application level:
+
+- Enable logging to file & copy the logs for sharing
+- Ignore events that do not have a snapshot
 
 ### Camera configuration
 
-- Throttling
+- Throttling - In seconds, the minimum interval between events triggering flows. Set to zero to disable.
 - Unique events - default checked. When checked, each unique Frigate events can only trigger a workflow once. You may want to uncheck this event if you are relying on zones: if this checkbox is selected, an event may be triggered for an object in zone A but will not re-trigger if the object moves to zone B.In
-- MQTT config
+- MQTT configuration
 
 ## Roadmap
 
 Below is a list of what will be implemented next:
 
-1. Ability to export the RTSP feed from the birsdeye view to a video provider (e.g. Vimeo)
+1. Ability to edit MQTT config at app level
+2. Ability to export the RTSP feed from the birsdeye view to a video provider (e.g. Vimeo)
 3. Ability to export the event video clip to a video provider (e.g. Vimeo)
 4. Dynamically add camera tokens based on the objects detected by Frigate. e.g. `Dog occupancy`/`Dog detected`, `Car occupancy`/`Car detected`, etc.
 

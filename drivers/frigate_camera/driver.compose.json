@@ -49,6 +49,12 @@
         "max": 3600,
         "units": { "en": "seconds" },
         "hint": { "en": "Defines the maximum frequency at which this camera can trigger events. Set to 0 to disable throttling." }
+      }, {
+        "id": "uniqueEvents",
+        "type": "checkbox",
+        "value": true,
+        "label": { "en": "Unique events" },
+        "hint": { "en": "When checked, each unique Frigate events can only trigger a workflow once." }
       }
     ]
   }, {

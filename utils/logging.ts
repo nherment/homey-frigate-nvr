@@ -27,11 +27,11 @@ interface LogMessage {
 
 let fileSizeCheckTimeout:NodeJS.Timeout|null = null
 
-// debounce checks for file sizes b/c it's an expensive operation 
+// debounce checks for file sizes b/c it's an expensive operation
 async function scheduleCheckFileSize() {
   if(!fileSizeCheckTimeout) {
     fileSizeCheckTimeout = setTimeout(async () => {
-      try { 
+      try {
         await enforceFileSize()
       } catch(err) {
         console.error(err)
@@ -117,10 +117,12 @@ export async function getLogsFromFile() {
   return await fs.readFile(LogFilePath, 'utf8')
 }
 
-
-
 export async function emptyLogFile() {
   return await fs.writeFile(LogFilePath, '', 'utf8')
 }
 
-enforceFileSize().catch(err => console.error(err))
+enforceFileSize().catch(err => {
+  console.error(err)
+  // create the file if it could not be read
+  emptyLogFile().then(() => enforceFileSize())
+})

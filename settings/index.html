@@ -29,46 +29,52 @@
       </h1>
     </header>
 
-    <fieldset class="homey-form-checkbox-set">
-        <legend class="homey-form-checkbox-set-title">Logging</legend>
-    
-        <label class="homey-form-checkbox">
-          <input class="homey-form-checkbox-input" type="checkbox" name="loggingEnabled" id="loggingEnabled"/>
-          <span class="homey-form-checkbox-checkmark"></span>
-          <span class="homey-form-checkbox-text">Record logs</span>
-        </label>
-    
-        <label class="homey-form-label" for="logLevel">Logging level</label>
-        <select class="homey-form-select" name="logLevel" id="logLevel" >
-          <option value="error">ERROR</option>
-          <option value="info">INFO</option>
-        </select>
-    </fieldset>
-
-    <fieldset class="homey-form-checkbox-set">
-        <legend class="homey-form-checkbox-set-title">MQTT</legend>
-        <label class="homey-form-checkbox">
-          <input class="homey-form-text-input" type="checkbox" name="loggingEnabled" id="loggingEnabled"/>
-          <span class="homey-form-checkbox-checkmark"></span>
-          <span class="homey-form-checkbox-text">Record logs</span>
-        </label>
-    
-        <label class="homey-form-label" for="logLevel">Logging level</label>
-        <select class="homey-form-select" name="logLevel" id="logLevel" >
-          <option value="error">ERROR</option>
-          <option value="info">INFO</option>
-        </select>
-    </fieldset>
-
     <button id="save" class="homey-button-primary-full">Save changes</button>
     <br/>
     <br/>
     <button id="showLogs" class="homey-button-secondary-shadow">Show logs</button>
     <button id="deleteLogs" class="homey-button-danger-shadow homey-button-small">Delete logs</button>
 
+    <fieldset class="homey-form-checkbox-set">
+        <legend class="homey-form-checkbox-set-title">Logging</legend>
+
+        <label class="homey-form-checkbox">
+          <input class="homey-form-checkbox-input" type="checkbox" name="loggingEnabled" id="loggingEnabled"/>
+          <span class="homey-form-checkbox-checkmark"></span>
+          <span class="homey-form-checkbox-text">Record logs</span>
+        </label>
+
+        <label class="homey-form-label" for="logLevel">Logging level</label>
+        <select class="homey-form-select" name="logLevel" id="logLevel" >
+          <option value="error">ERROR</option>
+          <option value="info">INFO</option>
+        </select>
+    </fieldset>
+
     <dialog id="logsDialog">
 
-    <fieldset class="homey-form-fieldset">
+      <fieldset class="homey-form-fieldset">
+        <legend class="homey-form-legend">Cameras</legend>
+
+        <div class="homey-form-group">
+          <label class="homey-form-label" for="snapshotRequired">Event snapshot required</label>
+          <input class="homey-form-input" id="snapshotRequired" type="checkbox" checked />
+        </div>
+        <!-- <div class="homey-form-group">
+          <label class="homey-form-label" for="mqttPort">MQTT Port</label>
+          <input class="homey-form-input" id="mqttPort" type="text" value="" />
+        </div>
+        <div class="homey-form-group">
+          <label class="homey-form-label" for="mqttUsername">Username</label>
+          <input class="homey-form-input" id="mqttUsername" type="text" value="" />
+        </div>
+        <div class="homey-form-group">
+          <label class="homey-form-label" for="mqttPassword">Password</label>
+          <input class="homey-form-input" id="mqttPassword" type="password" value="" />
+        </div> -->
+      </fieldset>
+
+    <!-- <fieldset class="homey-form-fieldset">
       <legend class="homey-form-legend">Frigate</legend>
 
       <div class="homey-form-group">
@@ -91,7 +97,7 @@
         <label class="homey-form-label" for="mqttPassword">Password</label>
         <input class="homey-form-input" id="mqttPassword" type="password" value="" />
       </div>
-    </fieldset>
+    </fieldset> -->
 
     <script type="text/javascript">
       // a method named 'onHomeyReady' must be present in your code
@@ -106,6 +112,7 @@
         var showLogsElement = document.getElementById("showLogs");
         var hideLogsElement = document.getElementById("hideLogs");
         var logsDialogElement = document.getElementById("logsDialog");
+        var snapshotRequiredElement = document.getElementById("snapshotRequired");
 
         Homey.get("loggingEnabled", function (err, loggingEnabled) {
           if (err) return Homey.alert(err);
@@ -117,16 +124,24 @@
           logLevelElement.value = logLevel || 'error';
         });
 
+        Homey.get("snapshotRequired", function (err, snapshotRequired) {
+          if (err) return Homey.alert(err);
+          snapshotRequiredElement.checked = snapshotRequired || false;
+        });
+
         saveElement.addEventListener("click", function (e) {
           Homey.set("loggingEnabled", loggingEnabledElement.checked, function (err) {
             if (err) return Homey.alert(err);
             Homey.set("logLevel", logLevelElement.value, function (err) {
               if (err) return Homey.alert(err);
-              Homey.alert('Saved. Restart the app for the new settings to take effect.')
+              Homey.set("snapshotRequired", snapshotRequiredElement.checked, function (err) {
+                if (err) return Homey.alert(err);
+                Homey.alert('Saved. Restart the app for the new settings to take effect.')
+              })
             });
           });
         });
-        
+
         showLogsElement.addEventListener("click", function (e) {
           Homey.api("GET", "/logs", function (err, result) {
             if (err) return Homey.alert(err);
@@ -138,7 +153,7 @@
           logsDialogElement.close()
         });
 
-        
+
         var deleteLogsElement = document.getElementById("deleteLogs");
         deleteLogsElement.addEventListener("click", function (e) {
           Homey.api("DELETE", "/logs", function (err, result) {
@@ -147,7 +162,7 @@
           });
         });
 
-        
+
         var copyLogsElement = document.getElementById("copyLogs");
         copyLogsElement.addEventListener("click", function (e) {
           logsElement.select();
