@@ -73,9 +73,6 @@ export class Logger {
       // } else {
       //   console.info(message)
       // }
-      if(this.logLevel === 'error' && level === 'info') {
-        return
-      }
 
       if(typeof message === 'string') {
         message = {
@@ -89,6 +86,9 @@ export class Logger {
       }
       if(this.homeyLogger)  {
         this.homeyLogger.log(JSON.stringify(message))
+      }
+      if(this.logLevel === 'error' && level === 'info') {
+        return
       }
       const timestamp = (new Date()).toISOString()
       const messageStr = JSON.stringify(message)

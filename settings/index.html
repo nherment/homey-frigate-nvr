@@ -31,12 +31,9 @@
 
     <button id="save" class="homey-button-primary-full">Save changes</button>
     <br/>
-    <br/>
-    <button id="showLogs" class="homey-button-secondary-shadow">Show logs</button>
-    <button id="deleteLogs" class="homey-button-danger-shadow homey-button-small">Delete logs</button>
 
     <fieldset class="homey-form-checkbox-set">
-        <legend class="homey-form-checkbox-set-title">Logging</legend>
+      <legend class="homey-form-legend">Logging</legend>
 
         <label class="homey-form-checkbox">
           <input class="homey-form-checkbox-input" type="checkbox" name="loggingEnabled" id="loggingEnabled"/>
@@ -50,55 +47,35 @@
           <option value="info">INFO</option>
         </select>
     </fieldset>
+    <br/>
+    <br/>
+    <hr/>
+    <br/>
+
+    <fieldset class="homey-form-checkbox-set">
+      <legend class="homey-form-legend">Cameras</legend>
+
+      <label class="homey-form-checkbox">
+        <input class="homey-form-checkbox-input" type="checkbox" name="snapshotRequired" id="snapshotRequired"/>
+        <span class="homey-form-checkbox-checkmark"></span>
+        <span class="homey-form-checkbox-text">Ignore events that do not have a snapshot</span>
+      </label>
+
+    </fieldset>
 
     <dialog id="logsDialog">
-
-      <fieldset class="homey-form-fieldset">
-        <legend class="homey-form-legend">Cameras</legend>
-
-        <div class="homey-form-group">
-          <label class="homey-form-label" for="snapshotRequired">Event snapshot required</label>
-          <input class="homey-form-input" id="snapshotRequired" type="checkbox" checked />
-        </div>
-        <!-- <div class="homey-form-group">
-          <label class="homey-form-label" for="mqttPort">MQTT Port</label>
-          <input class="homey-form-input" id="mqttPort" type="text" value="" />
-        </div>
-        <div class="homey-form-group">
-          <label class="homey-form-label" for="mqttUsername">Username</label>
-          <input class="homey-form-input" id="mqttUsername" type="text" value="" />
-        </div>
-        <div class="homey-form-group">
-          <label class="homey-form-label" for="mqttPassword">Password</label>
-          <input class="homey-form-input" id="mqttPassword" type="password" value="" />
-        </div> -->
-      </fieldset>
-
-    <!-- <fieldset class="homey-form-fieldset">
-      <legend class="homey-form-legend">Frigate</legend>
-
-      <div class="homey-form-group">
-        <label class="homey-form-label" for="frigateUrl">Frigate URL</label>
-        <input class="homey-form-input" id="frigateUrl" type="text" value="" />
-      </div>
-      <div class="homey-form-group">
-        <label class="homey-form-label" for="mqttHost">MQTT Host</label>
-        <input class="homey-form-input" id="mqttHost" type="text" value="" />
-      </div>
-      <div class="homey-form-group">
-        <label class="homey-form-label" for="mqttPort">MQTT Port</label>
-        <input class="homey-form-input" id="mqttPort" type="text" value="" />
-      </div>
-      <div class="homey-form-group">
-        <label class="homey-form-label" for="mqttUsername">Username</label>
-        <input class="homey-form-input" id="mqttUsername" type="text" value="" />
-      </div>
-      <div class="homey-form-group">
-        <label class="homey-form-label" for="mqttPassword">Password</label>
-        <input class="homey-form-input" id="mqttPassword" type="password" value="" />
-      </div>
-    </fieldset> -->
-
+      <button id="hideLogs" class="homey-button-secondary-shadow">Close</button>
+      <button id="copyLogs" class="homey-button-secondary-shadow">Copy logs</button>
+      <br/>
+      <textarea readonly id="logs" rows="100" cols="80"></textarea>
+    </dialog>
+    <br/>
+    <br/>
+    <hr/>
+    <hr/>
+    <br/>
+    <button id="showLogs" class="homey-button-secondary-shadow">Show logs</button>
+    <button id="deleteLogs" class="homey-button-danger-shadow homey-button-small">Delete logs</button>
     <script type="text/javascript">
       // a method named 'onHomeyReady' must be present in your code
       function onHomeyReady(Homey) {
@@ -108,9 +85,7 @@
         var loggingEnabledElement = document.getElementById("loggingEnabled");
         var logLevelElement = document.getElementById("logLevel");
         var saveElement = document.getElementById("save");
-        var logsElement = document.getElementById("logs");
         var showLogsElement = document.getElementById("showLogs");
-        var hideLogsElement = document.getElementById("hideLogs");
         var logsDialogElement = document.getElementById("logsDialog");
         var snapshotRequiredElement = document.getElementById("snapshotRequired");
 
@@ -142,6 +117,7 @@
           });
         });
 
+        var logsElement = document.getElementById("logs");
         showLogsElement.addEventListener("click", function (e) {
           Homey.api("GET", "/logs", function (err, result) {
             if (err) return Homey.alert(err);
@@ -149,10 +125,11 @@
             logsElement.value = result
           });
         });
+
+        var hideLogsElement = document.getElementById("hideLogs");
         hideLogsElement.addEventListener("click", function (e) {
           logsDialogElement.close()
         });
-
 
         var deleteLogsElement = document.getElementById("deleteLogs");
         deleteLogsElement.addEventListener("click", function (e) {
@@ -161,7 +138,6 @@
             Homey.alert('Logs deleted')
           });
         });
-
 
         var copyLogsElement = document.getElementById("copyLogs");
         copyLogsElement.addEventListener("click", function (e) {
