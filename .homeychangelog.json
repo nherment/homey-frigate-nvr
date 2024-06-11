@@ -49,5 +49,8 @@
   },
   "1.2.0": {
     "en": "Events have zones. Ability to ignore events with no snapshot. Ability to have unique flow events trigger more than once."
+  },
+  "1.2.1": {
+    "en": "Fix broken app settings page (required snapshots option)"
   }
 }
